@@ -51,6 +51,12 @@ else:
 
 mcp = FastMCP("t2m-desktop-control")
 
+# Versao do servidor. Fica exposta em get_approval_status() e diagnostico()
+# porque descobrir "qual versao esta realmente rodando" foi uma fonte recorrente
+# de confusao: o app mantem o processo antigo vivo ate reiniciar, e um zip
+# antigo na pasta de downloads e facil de subir por engano.
+VERSAO = "0.8.2"
+
 # ---------------------------------------------------------------------------
 # Log de auditoria
 # ---------------------------------------------------------------------------
@@ -474,6 +480,7 @@ def diagnostico() -> dict:
     Acao apenas de leitura, nao pede aprovacao.
     """
     info: dict = {
+        "versao_do_servidor": VERSAO,
         "processo": {
             "pid": os.getpid(),
             "executavel_python": sys.executable,
@@ -569,6 +576,7 @@ def get_approval_status() -> dict:
     permanentemente e o caminho do log de auditoria.
     """
     return {
+        "versao_do_servidor": VERSAO,
         "mode": _approval_mode,
         "always_allowed": [
             {"tool": tool, "window": win} for (tool, win) in sorted(_always_allowed)
@@ -980,5 +988,6 @@ def focus_window(title_contains: str) -> str:
 
 
 if __name__ == "__main__":
-    _audit("server_start", mode=_approval_mode, pyautogui=bool(pyautogui))
+    _audit("server_start", versao=VERSAO, mode=_approval_mode,
+           pyautogui=bool(pyautogui))
     mcp.run()

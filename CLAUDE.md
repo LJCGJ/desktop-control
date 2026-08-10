@@ -4,6 +4,44 @@
 > contexto do projeto sem depender de memória entre conversas. Mantenha-o
 > atualizado conforme o projeto evolui.
 
+## ✅ RETOMADA CONCLUÍDA em 10/08/2026 ~17h50 — B1 VALIDADO, click com window OK
+
+**Resultado:** o PLANO B1 (registro via `claude_desktop_config.json` da pasta
+virtualizada da Store, modo `host`) FUNCIONOU por completo. Numa sessão nova
+as ferramentas apareceram na ponte com o prefixo
+`mcp__remote-devices__t2m-desktop-control__*` (sem o `plugin_...` — esse é o
+sinal de que quem respondeu foi o servidor do config, não o do plugin).
+
+Validado em campo nesta sessão (contexto do config, SESSIONNAME vazio):
+- `get_approval_status` → `versao_do_servidor: 0.8.2`, `mode: host`,
+  audit log na pasta do projeto. ✔
+- **AÇÕES FUNCIONAM sem popup nesse contexto** (o risco aberto do B1 caiu):
+  `focus_window`, `press_keys`, `drag` e `click` executaram de verdade. ✔
+- **TESTE PENDENTE CONCLUÍDO:** `click(942, 110, window="T2M Security")` no
+  botão "Configuracoes" do T2M Security Manager v4.2 → a janela
+  "Configuracoes" ABRIU (evidência `qa-resume-02.png`); fechada em seguida
+  com `click(..., window="Configuracoes")` no Cancelar. A verificação de
+  janela alvo funcionou inclusive com a janela no 2º monitor. ✔
+
+Aprendizados novos (10/08, fim de tarde):
+- **`screenshot` só captura o monitor principal (1366x768).** O T2M estava
+  no 2º monitor (x=1525) e ficava invisível. Solução usada: `drag` na barra
+  de título (1900,50 → 600,60) trouxe a janela para o monitor principal.
+  Melhoria futura: capturar todos os monitores (`ImageGrab.grab(all_screens=True)`).
+- **`press_keys` com atalhos do shell (Win+Shift+Left) não surtiu efeito**,
+  mesmo após click na janela — a janela não se moveu (2 tentativas). Hotkeys
+  de sistema via pyautogui são pouco confiáveis nesse contexto; mover janela
+  por `drag` funciona.
+- `screenshot(path=<pasta do projeto>)` é o jeito de a nuvem VER a captura:
+  a pasta do projeto é alcançável pela ponte; a Temp padrão não é.
+- Estado deixado: janela do T2M movida para o monitor principal (225,47);
+  diálogo Configuracoes fechado com Cancelar (nada salvo).
+
+**Pendências que restam:** (1) reportar à Anthropic o bug do app desktop —
+conector de plugin local fica "não conectado" (detalhes na seção "CAUSA
+ENCONTRADA"); (2) itens de "Publicação" e nomenclatura abaixo; (3) melhoria
+do screenshot multi-monitor.
+
 ## O que é
 
 **T2M Desktop Control** é um servidor MCP (Model Context Protocol) em Python que
@@ -16,7 +54,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.8.1
+- Versão atual: 0.8.2 (instalada como plugin no app desktop em 10/08/2026 ~16:38)
 
 ## Como o Claude trabalha neste projeto
 
@@ -213,6 +251,34 @@ antigo → "Fazer upload de plugin" com o zip novo → **fechar o app pela bande
 e reabrir. Sem desinstalar, o upload não substitui; sem reiniciar, o processo
 antigo continua no ar.
 
+⚠️ **Sempre CONFERIR a instalação** (lição de 10/08, tarde): durante a
+atualização para 0.8.2 o upload não se concretizou e o plugin ficou
+simplesmente **desinstalado** sem ninguém perceber — a lista em Configurações →
+Plugins só mostrava o "Engineering" da Anthropic. Sintoma na sessão: nenhuma
+ferramenta `plugin_t2m-desktop-control` aparece, por mais que se recarregue.
+Depois de qualquer upload, abrir Configurações → Plugins e confirmar que
+"T2m desktop control" está na lista e habilitado.
+
+## As ferramentas de uma sessão são fixadas quando ela COMEÇA (descoberta 10/08)
+
+Instalar/reinstalar o plugin **não** faz as ferramentas aparecerem numa
+conversa já aberta. Evidências da sessão da tarde de 10/08: (a) com o plugin
+desinstalado, a skill `/qa-desktop` continuava listada na sessão antiga —
+retrato de quando a sessão nasceu; (b) após reinstalar a 0.8.2 e reiniciar o
+app, a sessão antiga seguiu vendo só as 8 ferramentas da ponte, mesmo com
+vários refreshes ao longo de minutos.
+
+Regra prática: mexeu no plugin (instalou, atualizou, reinstalou) → **abrir uma
+tarefa/conversa NOVA** para ver o efeito. A nota antiga de que "recarregar
+costuma resolver" vale para atraso de carga dentro de uma sessão que já nasceu
+com o plugin instalado, não para plugin instalado depois.
+
+Bônus descoberto no mesmo dia: o Claude consegue montar o zip do plugin
+sozinho, da nuvem, lendo a pasta do projeto pela ponte e gravando o zip de
+volta (ex.: `t2m-desktop-control-0.8.2.zip` na raiz do projeto). Conteúdo do
+zip: `.claude-plugin/`, `server/` (sem `__pycache__`), `skills/`,
+`requirements.txt`, `README.md`, `LICENSE`, `INSTALL-desktop.md`.
+
 > Melhoria futura para robustez: tirar o popup do processo do servidor e usar um
 > pequeno aplicativo de aprovação rodando na sessão do usuário (bandeja),
 > conversando com o servidor por arquivo ou porta local. Resolveria de vez,
@@ -225,6 +291,79 @@ antigo continua no ar.
   estar no modo "Na sua máquina"; no Claude Code, já é local por natureza.
 
 ## Pendências / próximos passos
+
+**[x] TESTE CONCLUÍDO (10/08 ~17h50):** `click` com `window` confirmado no
+botão "Configuracoes" do T2M Security Manager — ver seção "RETOMADA
+CONCLUÍDA" no topo. Evidências: `qa-resume-01.png` / `qa-resume-02.png`.
+
+**10/08 ~17h — tentativa numa sessão nuvem, ferramentas não apareceram.
+Diagnóstico feito, causa provável: sessão nasceu antes do plugin subir.**
+Sintoma NOVO documentado: a skill `/qa-desktop` aparecia na sessão, mas
+NENHUMA ferramenta `plugin_t2m-desktop-control` (a ponte ficou nos 8 tools
+básicos por vários refreshes ao longo de minutos). Ou seja: skill visível ≠
+servidor MCP proxiado — são canais separados.
+
+O que foi VERIFICADO e está OK (não perder tempo re-checando):
+- Configurações → Plugins: "T2m desktop control" instalado, habilitado,
+  atualizado (print do usuário).
+- Zip 0.8.2 e `.claude-plugin/plugin.json`: corretos, `mcpServers` declarado.
+- `server/server.py` da 0.8.2: sintaxe OK (py_compile), 16 `@mcp.tool`,
+  imports de topo só stdlib+fastmcp (pyautogui é lazy).
+- O servidor 0.8.2 INICIA sem erro: `t2m_audit.log` do projeto tem
+  `server_start versao 0.8.2 mode host` às 15:48 (execução a partir da pasta).
+
+Não foi possível conferir o audit log do plugin instalado (fica na pasta do
+plugin em AppData, que a ponte não alcança — o padrão do caminho é relativo a
+`__file__`). Pistas para a próxima sessão: (1) aba "Conectores" na tela do
+plugin deve listar `t2m-desktop-control`; (2) abrir conversa NOVA com o app
+já reiniciado e chamar `get_approval_status`.
+
+**CAUSA ENCONTRADA (10/08 ~17h10, print do usuário):** na aba "Conectores"
+da tela do plugin, `t2m-desktop-control` aparece listado mas **não
+conectado** — há um botão "Instalar" ao lado e o texto "Conecte cada uma
+para que Claude possa usá-las". Ou seja: instalar o plugin NÃO conecta o
+servidor MCP automaticamente; é um passo separado, por conector. E o botão
+"Instalar" estava **redirecionando para o Diretório geral de conectores**
+em vez de instalar o servidor local do plugin (possível bug do app desktop).
+Isso explica o sintoma inteiro: skill visível (skills não dependem do
+servidor), ferramentas ausentes (servidor nunca subiu).
+
+CONFIRMADO em seguida: o "Instalar" só abre o Diretório geral de conectores
+(loja pública) — um plugin enviado por arquivo não está lá, então o fluxo é
+um beco sem saída. Toggle off/on + reinício pela bandeja + conversa nova:
+**nada funcionou** (testado pelo Leonardo, 10/08 ~17h30). Conclusão:
+**BUG DO APP DESKTOP** — plugin local com `mcpServers` fica preso em
+"não conectado" sem caminho de conexão na interface. Reportar à Anthropic.
+Nota: nos testes da manhã de 10/08 as ferramentas funcionaram — então ou o
+conector foi conectado naquela época por outro caminho, ou o app mudou de
+comportamento entre as versões.
+
+**PLANO B1 (em teste): voltar ao `claude_desktop_config.json`, agora viável.**
+O veto da seção "⚠️ INSTALAR COMO PLUGIN" tinha um único motivo: o popup de
+aprovação travava nesse contexto (sem área de trabalho interativa). Com o
+modo `host` (padrão desde v0.8.0) NÃO EXISTE MAIS POPUP — o consentimento é
+do app anfitrião — então o bloqueio documentado deixou de se aplicar.
+Registro sugerido (em `%APPDATA%\Claude\claude_desktop_config.json`):
+`mcpServers.t2m-desktop-control = { command: "python", args:
+["C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\server\\server.py"],
+env: { T2M_APPROVAL_MODE: "host" } }`. Depois fechar pela bandeja, reabrir,
+conversa nova, `get_approval_status`. Riscos conhecidos do contexto
+(SESSIONNAME vazio, cwd system32): leitura funcionava; ações sem popup nunca
+foram testadas nesse contexto — o teste do `click` dirá.
+**PLANO B2 (fallback já validado):** Claude Code no terminal com `.mcp.json`
+/ `configurar-mcp.ps1` — roda na sessão interativa do usuário.
+
+**B1 APLICADO em 10/08 ~17h27.** O registro foi gravado no config. Detalhe
+importante descoberto: o app desktop é instalado via Microsoft Store
+(pacote MSIX), então o `claude_desktop_config.json` REAL fica na pasta
+virtualizada:
+`C:\Users\LeonardoJoseCordeiro\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`
+(não no %APPDATA% clássico). A ponte do Cowork não alcança essa pasta
+(protegida); a edição foi feita pelo Claude na nuvem e salva manualmente
+pelo Leonardo. Próximo passo: reiniciar pela bandeja → conversa nova →
+`get_approval_status` (deve responder 0.8.2) → teste do `click` com
+`window` no botão Configurações do T2M Security Manager.
+
 
 Da revisão de código (itens ainda abertos, prioridade baixa):
 - [x] #4 — FEITO (v0.4.0). "Sempre permitir" agora é vinculado à janela ativa:

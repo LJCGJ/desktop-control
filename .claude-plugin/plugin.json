@@ -1,15 +1,25 @@
 {
   "name": "t2m-desktop-control",
   "description": "Controle de desktop no Windows (mouse, teclado e janelas) com aprovacao estilo Claude Code. Util para automacao de QA de aplicativos desktop.",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "author": {
     "name": "Leonardo Gonzaga Junior"
   },
-  "keywords": ["desktop", "automation", "qa", "windows", "mouse", "keyboard", "testing"],
+  "keywords": [
+    "desktop",
+    "automation",
+    "qa",
+    "windows",
+    "mouse",
+    "keyboard",
+    "testing"
+  ],
   "mcpServers": {
     "t2m-desktop-control": {
       "command": "python",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/server/server.py"],
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/server/server.py"
+      ],
       "env": {
         "T2M_APPROVAL_MODE": "host"
       }
