@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.4.2
+- Versão atual: 0.5.0
 
 ## Como o Claude trabalha neste projeto
 
@@ -57,9 +57,11 @@ Controle de aprovação: `set_approval_mode`, `get_approval_status`,
 - Modos: `ask` (padrão, pede confirmação a cada ação) e `auto` (sem popups).
 - Popup nativo com 3 opções: Permitir uma vez / Sempre permitir esta ferramenta /
   Negar. Fechar no X ou Esc = negar; Enter = permitir uma vez.
-- "Sempre permitir" memoriza por ferramenta **e por janela ativa** (v0.4.0):
-  a liberação só vale enquanto a janela em foco no momento da aprovação seguir
-  ativa. Muda o foco, reaprova.
+- "Sempre permitir" memoriza por ferramenta **e por janela ALVO** (v0.5.0):
+  para ações com coordenadas o escopo vem de `_window_at_point(x, y)` (a janela
+  sob o clique); para teclado, da janela ativa; para `focus_window`, da janela
+  que será focada. Antes usava a janela ativa para tudo, o que atribuía a
+  permissão à janela errada quando o usuário trocava de foco enquanto decidia.
 - **O modelo NÃO consegue afrouxar a própria segurança:** mudar para `auto` exige
   confirmação humana no popup. Voltar para `ask` é livre.
 - **Log de auditoria** em `t2m_audit.log` (uma linha JSON por evento). Caminho
@@ -98,6 +100,20 @@ DUAS vezes. Agora `_APPROVAL_TIMEOUT` = 45s (env `T2M_APPROVAL_TIMEOUT`), o
 popup se fecha sozinho aos 42s negando, e o erro devolvido diz explicitamente
 que nada foi executado e que tentar de novo é seguro. O popup também mostra um
 contador regressivo.
+
+**10/08/2026 — primeiro QA real do T2M Security Manager v4.2.** Sessão completa
+usando a skill `qa-desktop`: mapeada a tela inicial, aberto o Histórico, achado
+1 bug confirmado no app (mojibake: "sÃEo" em vez de "são" no detalhe da execução)
+e 4 observações. Relatório em `relatorio-qa-t2m-2026-08-10.md`, evidências em
+`qa-01`..`qa-03.png`. Validadas em campo: `click`, `screenshot`, `list_windows`,
+`move_mouse`, e o "Sempre permitir" por janela.
+
+Bug de segurança do PLUGIN encontrado nessa sessão e corrigido (v0.5.0): a
+permissão estava sendo vinculada à **janela ativa no momento do popup**. Como o
+usuário troca de janela para ler o pedido no chat, a permissão foi parar na
+janela "Claude" — errada e sensível. Agora o escopo vem da janela ALVO
+(`_window_at_point` para coordenadas). Lição geral: "janela em foco" é um proxy
+ruim para "janela que a ação atinge".
 
 ## Restrições importantes
 

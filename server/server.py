@@ -106,7 +106,13 @@ class ActionDenied(Exception):
 
 def _active_window_key() -> str | None:
     """Retorna o titulo da janela ativa (foreground), ou None se nao der pra
-    determinar. Serve de "escopo" para as aprovacoes de 'Sempre permitir'.
+    determinar.
+
+    ATENCAO: a janela ativa e um proxy FRAGIL para "a janela que a acao vai
+    atingir". Enquanto o usuario le/decide, ele pode trocar de janela - e a
+    permissao acabaria vinculada a janela errada. Por isso, para acoes com
+    coordenadas, prefira _window_at_point(). Esta funcao serve para acoes de
+    teclado, onde o alvo realmente e quem tem o foco.
     """
     try:
         import pygetwindow as gw
@@ -117,6 +123,43 @@ def _active_window_key() -> str | None:
         return title or None
     except Exception:
         return None
+
+
+def _window_at_point(x: int, y: int) -> str | None:
+    """Retorna o titulo da janela visivel que esta sob o ponto (x, y).
+
+    Usado como escopo das aprovacoes de acoes com coordenadas (clique, arraste,
+    scroll). E mais honesto que a janela ativa: descreve exatamente ONDE a acao
+    vai acontecer, independente do que o usuario esteja olhando no momento em
+    que decide. Percorre as janelas na ordem em que o sistema as devolve e pega
+    a primeira que contem o ponto, ignorando janelas minimizadas (que o Windows
+    posiciona em coordenadas negativas fora da tela).
+    """
+    try:
+        import pygetwindow as gw
+        for w in gw.getAllWindows():
+            title = (w.title or "").strip()
+            if not title:
+                continue
+            # Janelas minimizadas ficam em -32000; nao sao alvo de clique.
+            if w.left <= -30000 or w.top <= -30000:
+                continue
+            if w.left <= x < w.left + w.width and w.top <= y < w.top + w.height:
+                return title
+    except Exception:
+        return None
+    return None
+
+
+def _scope_for(tool_name: str, x: int | None = None, y: int | None = None) -> str | None:
+    """Decide o escopo (janela) de uma aprovacao.
+
+    Com coordenadas, o alvo e a janela sob o ponto. Sem coordenadas (teclado,
+    ou clique na posicao atual), cai para a janela ativa.
+    """
+    if x is not None and y is not None and x >= 0 and y >= 0:
+        return _window_at_point(x, y) or _active_window_key()
+    return _active_window_key()
 
 
 def _require_pyautogui() -> None:
@@ -158,17 +201,22 @@ def _prompt_user(tool_name: str, details: str) -> str:
         return "deny"
 
 
-def _check_approval(tool_name: str, details: str) -> None:
+def _check_approval(tool_name: str, details: str,
+                    x: int | None = None, y: int | None = None,
+                    scope: str | None = None) -> None:
     """Aplica a politica de aprovacao. Levanta ActionDenied se negado.
 
-    O "Sempre permitir" e vinculado a janela ativa: so pula o popup se a MESMA
-    ferramenta ja foi liberada permanentemente COM A MESMA janela em foco.
+    O "Sempre permitir" e vinculado a JANELA ALVO da acao - a janela sob as
+    coordenadas, quando houver, ou a janela em foco para acoes de teclado.
+    Vincular ao alvo (e nao a janela que por acaso esta em foco na hora de
+    decidir) evita que a permissao seja registrada na janela errada quando o
+    usuario troca de janela enquanto le o pedido.
     """
     if _approval_mode == "auto":
         _audit("action_auto_approved", tool=tool_name, details=details)
         return
 
-    win = _active_window_key()
+    win = scope or _scope_for(tool_name, x, y)
 
     # Ja liberado permanentemente para esta ferramenta NESTA janela?
     if win is not None and (tool_name, win) in _always_allowed:
@@ -177,7 +225,7 @@ def _check_approval(tool_name: str, details: str) -> None:
 
     # Mostra ao usuario a qual janela o "Sempre permitir" ficaria restrito.
     if win:
-        scope_note = f"\n\nJanela ativa: {win}\n(\"Sempre permitir\" vale so para esta janela.)"
+        scope_note = f"\n\nJanela alvo: {win}\n(\"Sempre permitir\" vale so para esta janela.)"
     else:
         scope_note = ("\n\n(Janela ativa nao detectada - \"Sempre permitir\" "
                       "vai valer apenas UMA vez, por seguranca.)")
@@ -418,7 +466,7 @@ def move_mouse(x: int, y: int, duration: float = 0.25) -> str:
         duration: Tempo (segundos) do movimento, para parecer mais natural.
     """
     _require_pyautogui()
-    _check_approval("move_mouse", f"Mover o mouse para ({x}, {y}).")
+    _check_approval("move_mouse", f"Mover o mouse para ({x}, {y}).", x, y)
     pyautogui.moveTo(x, y, duration=duration)
     return f"Mouse movido para ({x}, {y})."
 
@@ -442,7 +490,7 @@ def click(
     """
     _require_pyautogui()
     where = "na posicao atual" if x < 0 or y < 0 else f"em ({x}, {y})"
-    _check_approval("click", f"Clicar ({button} x{clicks}) {where}.")
+    _check_approval("click", f"Clicar ({button} x{clicks}) {where}.", x, y)
     if x >= 0 and y >= 0:
         pyautogui.click(x=x, y=y, clicks=clicks, button=button)
     else:
@@ -541,7 +589,7 @@ def scroll(amount: int, x: int = -1, y: int = -1) -> str:
         y: Coordenada Y onde posicionar o mouse antes de rolar (-1 = atual).
     """
     _require_pyautogui()
-    _check_approval("scroll", f"Rolar a tela em {amount}.")
+    _check_approval("scroll", f"Rolar a tela em {amount}.", x, y)
     if x >= 0 and y >= 0:
         pyautogui.scroll(amount, x=x, y=y)
     else:
@@ -571,7 +619,8 @@ def drag(
         button: Botao do mouse usado no arrasto.
     """
     _require_pyautogui()
-    _check_approval("drag", f"Arrastar de ({from_x}, {from_y}) para ({to_x}, {to_y}).")
+    _check_approval("drag", f"Arrastar de ({from_x}, {from_y}) para ({to_x}, {to_y}).",
+                    from_x, from_y)
     pyautogui.moveTo(from_x, from_y, duration=0.2)
     pyautogui.dragTo(to_x, to_y, duration=duration, button=button)
     return f"Arraste de ({from_x}, {from_y}) para ({to_x}, {to_y}) executado."
@@ -593,7 +642,9 @@ def focus_window(title_contains: str) -> str:
     matches = [w for w in gw.getAllWindows() if title_contains.lower() in (w.title or "").lower()]
     if not matches:
         return f"Nenhuma janela encontrada contendo '{title_contains}'."
-    _check_approval("focus_window", f"Focar a janela: {matches[0].title!r}")
+    # O alvo aqui e conhecido explicitamente: a janela que sera focada.
+    _check_approval("focus_window", f"Focar a janela: {matches[0].title!r}",
+                    scope=(matches[0].title or "").strip() or None)
     win = matches[0]
     try:
         if win.isMinimized:
