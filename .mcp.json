@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "t2m-desktop-control": {
+      "command": "python",
+      "args": ["C:/CAMINHO/PARA/t2m-desktop-control/server/server.py"],
+      "env": {
+        "T2M_APPROVAL_MODE": "ask"
+      }
+    }
+  }
+}
