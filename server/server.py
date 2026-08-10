@@ -185,6 +185,94 @@ def _resolve_window(title_contains: str):
     )
 
 
+def _forcar_frente(win) -> bool:
+    """Traz a janela para frente, contornando o bloqueio de foco do Windows.
+
+    O Windows impede que um processo em segundo plano roube o foco (protecao
+    contra apps que se impoem na frente do usuario). Como o servidor MCP roda em
+    segundo plano, `SetForegroundWindow` sozinho falha - foi o erro 183 que
+    apareceu no uso real.
+
+    Tenta tres estrategias, da mais educada para a mais insistente:
+
+      1. Restaurar se estiver minimizada e pedir o foco normalmente.
+      2. Anexar a fila de entrada da thread em primeiro plano (AttachThreadInput)
+         - com isso o Windows passa a considerar que somos "do mesmo contexto"
+         e libera a troca de foco.
+      3. Apenas ELEVAR a janela na pilha, sem ativar. Nao da foco de teclado,
+         mas coloca a janela por cima - que e o que importa para um clique por
+         coordenadas.
+
+    Retorna True se a janela ficou em primeiro plano.
+    """
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+    except Exception:
+        return False
+
+    hwnd = getattr(win, "_hWnd", None)
+    if not hwnd:
+        return False
+
+    SW_RESTORE = 9
+    try:
+        if user32.IsIconic(hwnd):
+            user32.ShowWindow(hwnd, SW_RESTORE)
+            time.sleep(0.2)
+    except Exception:
+        pass
+
+    # 1) tentativa direta
+    try:
+        if user32.SetForegroundWindow(hwnd):
+            return True
+    except Exception:
+        pass
+
+    # 2) anexar a thread em primeiro plano
+    anexado = False
+    thread_fg = thread_eu = None
+    try:
+        janela_fg = user32.GetForegroundWindow()
+        thread_fg = user32.GetWindowThreadProcessId(janela_fg, None)
+        thread_eu = kernel32.GetCurrentThreadId()
+        if thread_fg and thread_fg != thread_eu:
+            anexado = bool(user32.AttachThreadInput(thread_eu, thread_fg, True))
+        user32.BringWindowToTop(hwnd)
+        user32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
+    finally:
+        if anexado:
+            try:
+                user32.AttachThreadInput(thread_eu, thread_fg, False)
+            except Exception:
+                pass
+
+    try:
+        if user32.GetForegroundWindow() == hwnd:
+            return True
+    except Exception:
+        pass
+
+    # 3) elevar sem ativar - suficiente para clique por coordenadas
+    try:
+        HWND_TOPMOST, HWND_NOTOPMOST = -1, -2
+        SWP_NOSIZE, SWP_NOMOVE, SWP_SHOWWINDOW = 0x0001, 0x0002, 0x0040
+        flags = SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW
+        user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags)
+        user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags)
+    except Exception:
+        pass
+
+    try:
+        return user32.GetForegroundWindow() == hwnd
+    except Exception:
+        return False
+
+
 def _focus_and_verify(win, x: int | None = None, y: int | None = None) -> None:
     """Traz a janela para frente e confirma que ela realmente esta sob o ponto.
 
@@ -196,10 +284,11 @@ def _focus_and_verify(win, x: int | None = None, y: int | None = None) -> None:
     try:
         if getattr(win, "isMinimized", False):
             win.restore()
-        win.activate()
     except Exception:
-        # Alguns apps recusam activate(); a verificacao abaixo decide.
         pass
+    # Nao dependemos do activate() do pygetwindow: ele usa SetForegroundWindow
+    # direto, que o Windows bloqueia para processos em segundo plano.
+    _forcar_frente(win)
     time.sleep(0.35)  # o gerenciador de janelas precisa de um instante
 
     if x is None or y is None or x < 0 or y < 0:
@@ -876,10 +965,18 @@ def focus_window(title_contains: str) -> str:
     try:
         if win.isMinimized:
             win.restore()
-        win.activate()
-    except Exception as exc:
-        return f"Janela encontrada ({win.title!r}) mas nao foi possivel focar: {exc}"
-    return f"Janela focada: {win.title!r}."
+    except Exception:
+        pass
+    veio = _forcar_frente(win)
+    _audit("focus_window", janela=win.title, primeiro_plano=veio)
+    if veio:
+        return f"Janela focada: {win.title!r}."
+    # Mesmo sem o foco de teclado, a janela pode ter sido elevada - o que basta
+    # para cliques por coordenadas. Quem decide e a verificacao antes de agir.
+    return (f"Janela {win.title!r} elevada, mas o Windows nao concedeu o foco de "
+            "teclado (protecao contra roubo de foco por processo em segundo "
+            "plano). Cliques por coordenada ainda funcionam se ela estiver por "
+            "cima; para digitar, clique nela uma vez.")
 
 
 if __name__ == "__main__":

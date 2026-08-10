@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.8.0
+- Versão atual: 0.8.1
 
 ## Como o Claude trabalha neste projeto
 
@@ -132,6 +132,23 @@ clicar. A skill foi atualizada para sempre passar `window`.
 > Padrão que vale lembrar: quando um agente e um humano compartilham a mesma
 > tela, o foco muda o tempo todo. Qualquer ação que dependa de "o que está em
 > foco" é uma corrida — declare o alvo e verifique antes de agir.
+
+## Foco de janela: o Windows bloqueia processo em segundo plano (v0.8.1)
+
+`pygetwindow.activate()` falhou em uso real com **erro 183** — o Windows impede
+que um processo que não está em primeiro plano roube o foco (proteção contra
+apps que se impõem). Como o servidor MCP roda em segundo plano, isso sempre vai
+acontecer.
+
+`_forcar_frente()` tenta, em cascata: restaurar se minimizada e pedir foco;
+`AttachThreadInput` na thread em primeiro plano (o Windows então libera a troca);
+e, por último, apenas **elevar** a janela com `SetWindowPos` sem ativar — não dá
+foco de teclado, mas coloca a janela por cima, que é o suficiente para clique por
+coordenadas. A verificação `_window_at_point` continua sendo o juiz final: se o
+alvo não estiver sob o ponto, aborta.
+
+Consequência prática: **clicar** costuma funcionar; **digitar** pode exigir que a
+janela tenha foco de teclado — nesse caso, clicar nela uma vez antes resolve.
 
 ## Consentimento é do aplicativo anfitrião (v0.8.0) — decisão de arquitetura
 
