@@ -32,6 +32,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Literal
 
@@ -149,6 +150,56 @@ def _window_at_point(x: int, y: int) -> str | None:
     except Exception:
         return None
     return None
+
+
+def _resolve_window(title_contains: str):
+    """Acha a primeira janela NAO minimizada cujo titulo contem o texto dado.
+
+    Levanta erro se nao encontrar - melhor falhar do que agir na janela errada.
+    """
+    try:
+        import pygetwindow as gw
+    except Exception as exc:
+        raise RuntimeError(f"pygetwindow nao instalado. Detalhe: {exc}")
+    needle = title_contains.lower()
+    for w in gw.getAllWindows():
+        title = (w.title or "").strip()
+        if not title or needle not in title.lower():
+            continue
+        return w
+    raise RuntimeError(
+        f"Nenhuma janela encontrada contendo {title_contains!r}. "
+        "Nada foi executado."
+    )
+
+
+def _focus_and_verify(win, x: int | None = None, y: int | None = None) -> None:
+    """Traz a janela para frente e confirma que ela realmente esta sob o ponto.
+
+    Esta verificacao e o que impede o acidente mais perigoso desta ferramenta:
+    clicar em coordenadas de tela sem saber QUAL aplicativo esta ali. Se outra
+    janela estiver por cima do ponto (o proprio chat, um popup, outro app), o
+    clique iria para o lugar errado. Preferimos abortar com uma mensagem clara.
+    """
+    try:
+        if getattr(win, "isMinimized", False):
+            win.restore()
+        win.activate()
+    except Exception:
+        # Alguns apps recusam activate(); a verificacao abaixo decide.
+        pass
+    time.sleep(0.35)  # o gerenciador de janelas precisa de um instante
+
+    if x is None or y is None or x < 0 or y < 0:
+        return
+    top = _window_at_point(x, y)
+    expected = (win.title or "").strip()
+    if top != expected:
+        raise RuntimeError(
+            f"Abortado por seguranca: o ponto ({x}, {y}) esta sobre "
+            f"{top!r}, e nao sobre a janela alvo {expected!r}. "
+            "Nada foi clicado. Traga a janela alvo para frente e tente de novo."
+        )
 
 
 def _scope_for(tool_name: str, x: int | None = None, y: int | None = None) -> str | None:
@@ -477,29 +528,53 @@ def click(
     y: int = -1,
     button: Literal["left", "right", "middle"] = "left",
     clicks: int = 1,
+    window: str = "",
 ) -> str:
     """Clica com o mouse. Se x/y forem informados, move ate la antes de clicar.
 
     Requer aprovacao do usuario.
+
+    SEMPRE informe `window` ao operar um aplicativo. Coordenadas de tela nao
+    dizem nada sobre QUAL programa esta naquele ponto: se outra janela estiver
+    por cima (o chat, um popup, outro app), o clique vai para o lugar errado.
+    Com `window`, a janela e trazida para frente e verificada antes do clique,
+    e a permissao fica restrita a ela.
 
     Args:
         x: Coordenada X (deixe -1 para clicar na posicao atual).
         y: Coordenada Y (deixe -1 para clicar na posicao atual).
         button: Botao do mouse: "left", "right" ou "middle".
         clicks: Numero de cliques (2 = duplo clique).
+        window: Trecho do titulo da janela alvo (ex: "T2M Security"). Se
+                informado, a janela e focada e verificada antes de clicar; se
+                outra janela estiver sobre o ponto, a acao e abortada.
     """
     _require_pyautogui()
     where = "na posicao atual" if x < 0 or y < 0 else f"em ({x}, {y})"
-    _check_approval("click", f"Clicar ({button} x{clicks}) {where}.", x, y)
+
+    target = None
+    scope = None
+    if window:
+        target = _resolve_window(window)
+        scope = (target.title or "").strip() or None
+        where += f" na janela {scope!r}"
+
+    _check_approval("click", f"Clicar ({button} x{clicks}) {where}.", x, y, scope=scope)
+
+    if target is not None:
+        _focus_and_verify(target, x, y)
+
     if x >= 0 and y >= 0:
         pyautogui.click(x=x, y=y, clicks=clicks, button=button)
     else:
         pyautogui.click(clicks=clicks, button=button)
+    _audit("click", x=x, y=y, button=button, clicks=clicks, window=scope)
     return f"Clique {button} x{clicks} executado {where}."
 
 
 @mcp.tool()
-def type_text(text: str, interval: float = 0.02, sensitive: bool = False) -> str:
+def type_text(text: str, interval: float = 0.02, sensitive: bool = False,
+              window: str = "") -> str:
     """Digita um texto usando o teclado.
 
     Suporta acentuacao e caracteres especiais (c, a, e, o...). Quando o texto
@@ -514,13 +589,27 @@ def type_text(text: str, interval: float = 0.02, sensitive: bool = False) -> str
         interval: Intervalo (segundos) entre teclas (usado no modo digitacao).
         sensitive: Se True, o conteudo NAO aparece no popup nem no log de
                    auditoria (use para senhas).
+        window: Trecho do titulo da janela alvo. Informe sempre que estiver
+                operando um aplicativo: garante que o texto va para a janela
+                certa, e nao para o que estiver em foco por acaso.
     """
     _require_pyautogui()
     if sensitive:
         preview = f"<conteudo sensivel oculto, {len(text)} caracteres>"
     else:
         preview = text if len(text) <= 60 else text[:57] + "..."
-    _check_approval("type_text", f"Digitar o texto: {preview!r}")
+
+    target = None
+    scope = None
+    if window:
+        target = _resolve_window(window)
+        scope = (target.title or "").strip() or None
+
+    _check_approval("type_text", f"Digitar o texto: {preview!r}"
+                    + (f" na janela {scope!r}" if scope else ""), scope=scope)
+
+    if target is not None:
+        _focus_and_verify(target)
 
     is_ascii = all(ord(c) < 128 for c in text)
     if is_ascii:
@@ -555,7 +644,7 @@ def type_text(text: str, interval: float = 0.02, sensitive: bool = False) -> str
 
 
 @mcp.tool()
-def press_keys(keys: list[str]) -> str:
+def press_keys(keys: list[str], window: str = "") -> str:
     """Aperta uma tecla ou combinacao de teclas (hotkey).
 
     Requer aprovacao do usuario.
@@ -565,11 +654,25 @@ def press_keys(keys: list[str]) -> str:
               Varias teclas viram um atalho simultaneo (ex: ["ctrl", "c"]).
               Nomes validos: enter, tab, esc, ctrl, alt, shift, win, f1..f12,
               up, down, left, right, delete, backspace, etc.
+        window: Trecho do titulo da janela alvo. Informe sempre que estiver
+                operando um aplicativo, para o atalho nao cair na janela errada
+                (um Ctrl+S no app errado pode ter consequencias).
     """
     _require_pyautogui()
     if not keys:
         raise ValueError("A lista 'keys' nao pode ser vazia.")
-    _check_approval("press_keys", f"Apertar teclas: {' + '.join(keys)}")
+
+    target = None
+    scope = None
+    if window:
+        target = _resolve_window(window)
+        scope = (target.title or "").strip() or None
+
+    _check_approval("press_keys", f"Apertar teclas: {' + '.join(keys)}"
+                    + (f" na janela {scope!r}" if scope else ""), scope=scope)
+
+    if target is not None:
+        _focus_and_verify(target)
     if len(keys) == 1:
         pyautogui.press(keys[0])
     else:

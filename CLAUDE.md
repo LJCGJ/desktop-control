@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.5.0
+- Versão atual: 0.6.0
 
 ## Como o Claude trabalha neste projeto
 
@@ -114,6 +114,24 @@ usuário troca de janela para ler o pedido no chat, a permissão foi parar na
 janela "Claude" — errada e sensível. Agora o escopo vem da janela ALVO
 (`_window_at_point` para coordenadas). Lição geral: "janela em foco" é um proxy
 ruim para "janela que a ação atinge".
+
+**10/08/2026 — v0.6.0: alvo declarado e verificado (lição mais importante até
+agora).** Na tentativa de validar a v0.5.0, o clique em (930,63) foi de novo
+atribuído a "Claude" — mas dessa vez o código estava CERTO: o usuário havia
+trazido o Claude à frente para ler a mensagem do chat, então o Claude realmente
+cobria aquele ponto. O clique foi parar na janela do chat.
+
+Diagnóstico real: **coordenada de tela não determina o aplicativo alvo.** Corrigir
+o escopo da permissão (v0.5.0) tratava o sintoma; a causa é agir por coordenadas
+sem garantir quem está por cima. Em v0.6.0 as ações (`click`, `type_text`,
+`press_keys`) aceitam `window="trecho do título"`: o plugin resolve a janela,
+pede aprovação já com esse escopo, traz a janela à frente e **verifica com
+`_window_at_point` que ela está sob o ponto** — se não estiver, aborta sem
+clicar. A skill foi atualizada para sempre passar `window`.
+
+> Padrão que vale lembrar: quando um agente e um humano compartilham a mesma
+> tela, o foco muda o tempo todo. Qualquer ação que dependa de "o que está em
+> foco" é uma corrida — declare o alvo e verifique antes de agir.
 
 ## Restrições importantes
 

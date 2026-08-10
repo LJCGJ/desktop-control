@@ -36,6 +36,16 @@ mudam, e um clique no lugar errado num app de verdade pode ter consequências.
    ação vai pedir aprovação ao usuário via popup — isso é esperado e saudável.
    Aja de forma pequena e deliberada, uma etapa por vez.
 
+   **Sempre informe o parâmetro `window`** com um trecho do título da janela que
+   você está testando (ex: `window="T2M Security"`). Isso não é burocracia: uma
+   coordenada de tela não diz nada sobre *qual programa* está naquele ponto. Se
+   outra janela estiver por cima — o chat onde o usuário lê suas mensagens, um
+   popup, outro app —, o clique iria para o lugar errado, com consequências
+   imprevisíveis. Com `window`, a janela é trazida à frente e verificada antes
+   da ação, e a permissão fica restrita a ela. Se a ferramenta abortar dizendo
+   que outra janela está sobre o ponto, não insista às cegas: tire um novo
+   screenshot e reavalie.
+
 3. **Verificar.** Tire outro `screenshot` e compare com o que você esperava. A
    tela mudou como deveria? Apareceu uma mensagem de erro? Um campo ficou
    vermelho? É aqui que o teste de fato acontece — a verificação, não o clique.
