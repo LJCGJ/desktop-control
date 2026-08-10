@@ -1,0 +1,21 @@
+# Log de auditoria (pode conter texto digitado — NUNCA versionar)
+t2m_audit.log
+*.audit.log
+
+# Screenshots gerados em runtime
+t2m_screenshot.png
+*.screenshot.png
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
