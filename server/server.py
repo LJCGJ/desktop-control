@@ -81,6 +81,13 @@ def _audit(event: str, **data) -> None:
 
 _APPROVAL_SCRIPT = str(Path(__file__).with_name("approval.py"))
 
+# Segundos de espera pela resposta no popup. Precisa ficar abaixo do timeout de
+# quem chama (a ponte do app desktop corta em ~60s). Ajustavel por env var.
+try:
+    _APPROVAL_TIMEOUT = int(os.environ.get("T2M_APPROVAL_TIMEOUT", "45"))
+except ValueError:
+    _APPROVAL_TIMEOUT = 45
+
 # Modo global: "ask" pede confirmacao; "auto" aprova tudo sem popup.
 _approval_mode: str = os.environ.get("T2M_APPROVAL_MODE", "ask").lower()
 if _approval_mode not in ("ask", "auto"):
@@ -122,16 +129,30 @@ def _require_pyautogui() -> None:
 
 
 def _prompt_user(tool_name: str, details: str) -> str:
-    """Abre o popup de aprovacao num processo separado e retorna a escolha."""
+    """Abre o popup de aprovacao num processo separado e retorna a escolha.
+
+    O tempo de espera precisa ser MENOR que o timeout de quem chama o servidor.
+    Quando o plugin e acessado por uma sessao na nuvem, a ponte do app desktop
+    desiste em ~60s: se o popup esperasse mais que isso, o chamador receberia um
+    erro de timeout enquanto a acao ainda poderia ser executada depois - e um
+    retry acabaria executando a acao DUAS vezes. Esperando menos, o pior caso
+    vira uma negacao limpa: nada e executado e tentar de novo e seguro.
+    """
     try:
         proc = subprocess.run(
-            [sys.executable, _APPROVAL_SCRIPT, tool_name, details],
+            # A janela se fecha sozinha 3s antes do nosso limite, para devolver
+            # "deny" de forma limpa em vez de ser morta pelo timeout.
+            [sys.executable, _APPROVAL_SCRIPT, tool_name, details,
+             str(max(5, _APPROVAL_TIMEOUT - 3))],
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=_APPROVAL_TIMEOUT,
         )
         choice = (proc.stdout or "").strip().splitlines()
         return choice[-1].strip() if choice else "deny"
+    except subprocess.TimeoutExpired:
+        _audit("approval_timeout", tool=tool_name, seconds=_APPROVAL_TIMEOUT)
+        return "timeout"
     except Exception:
         # Se nao conseguimos nem mostrar o popup, negamos por seguranca.
         return "deny"
@@ -178,6 +199,12 @@ def _check_approval(tool_name: str, details: str) -> None:
         _audit("action_approved", tool=tool_name, details=details,
                scope="once", window=win)
         return
+    if choice == "timeout":
+        raise ActionDenied(
+            f"Acao '{tool_name}' NAO executada: o usuario nao respondeu ao "
+            f"pedido de permissao em {_APPROVAL_TIMEOUT}s. Nada foi executado "
+            "no computador - e seguro tentar de novo se ele estiver por perto."
+        )
     _audit("action_denied", tool=tool_name, details=details, window=win)
     raise ActionDenied(
         f"Acao '{tool_name}' negada pelo usuario. "

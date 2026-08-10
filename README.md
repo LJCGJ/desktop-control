@@ -57,6 +57,7 @@ Se preferir não ver popups, troque o modo para automático (com `set_approval_m
 - **Log de auditoria.** Toda ação e decisão de aprovação é gravada em `t2m_audit.log` (uma linha JSON por evento). Configure o caminho com `T2M_AUDIT_LOG`.
 - **Texto sensível.** `type_text(..., sensitive=True)` não mostra o conteúdo no popup nem no log — use para senhas.
 - **Failsafe.** Mouse no canto superior esquerdo aborta qualquer ação.
+- **Prazo para responder.** O popup mostra um contador e nega automaticamente após ~45s sem resposta (ajustável em `T2M_APPROVAL_TIMEOUT`). Isso existe porque quem chama o servidor tem um limite próprio de espera — negar rápido garante que nada seja executado "atrasado" e que uma nova tentativa não repita a ação.
 - **Acentos.** `type_text` cola via área de transferência quando há caracteres não-ASCII (ç, ã, é…) e restaura o clipboard depois.
 
 ## Instalação (Windows)

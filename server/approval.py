@@ -12,14 +12,18 @@ Windows com tres opcoes e imprime a escolha do usuario no stdout:
 Rodar a UI em um processo separado evita conflitos entre o tkinter e a thread
 principal do servidor MCP (que fica ocupada com o transporte stdio).
 
+A janela se fecha sozinha (negando) quando o tempo acaba, porque quem chama o
+servidor tem um limite proprio de espera - devolver "deny" rapido e melhor que
+deixar o chamador estourar sem saber se a acao rodou ou nao.
+
 Uso:
-    python approval.py "<nome_da_ferramenta>" "<detalhes_da_acao>"
+    python approval.py "<nome_da_ferramenta>" "<detalhes_da_acao>" [timeout_s]
 """
 
 import sys
 
 
-def ask(tool_name: str, details: str) -> str:
+def ask(tool_name: str, details: str, timeout_s: int = 42) -> str:
     import tkinter as tk
 
     result = {"choice": "deny"}
@@ -97,12 +101,36 @@ def ask(tool_name: str, details: str) -> str:
         command=lambda: choose("always"),
     ).pack(side="right")
 
+    # Contador regressivo: deixa claro que a decisao tem prazo.
+    countdown = tk.Label(
+        container,
+        text="",
+        font=("Segoe UI", 8),
+        anchor="w",
+        fg="#888888",
+    )
+    countdown.pack(side="bottom", fill="x")
+
+    remaining = {"s": max(5, int(timeout_s))}
+
+    def tick() -> None:
+        if remaining["s"] <= 0:
+            choose("deny")
+            return
+        countdown.config(
+            text=f"Sem resposta em {remaining['s']}s, o pedido e negado "
+                 "automaticamente (nada sera executado)."
+        )
+        remaining["s"] -= 1
+        root.after(1000, tick)
+
     # Fechar no X = negar. Enter = permitir uma vez. Esc = negar.
     root.protocol("WM_DELETE_WINDOW", lambda: choose("deny"))
     root.bind("<Return>", lambda _e: choose("once"))
     root.bind("<Escape>", lambda _e: choose("deny"))
 
     root.after(100, lambda: root.focus_force())
+    tick()
     root.mainloop()
     return result["choice"]
 
@@ -111,7 +139,11 @@ def main() -> None:
     tool_name = sys.argv[1] if len(sys.argv) > 1 else "acao desconhecida"
     details = sys.argv[2] if len(sys.argv) > 2 else ""
     try:
-        choice = ask(tool_name, details)
+        timeout_s = int(sys.argv[3]) if len(sys.argv) > 3 else 42
+    except ValueError:
+        timeout_s = 42
+    try:
+        choice = ask(tool_name, details, timeout_s)
     except Exception as exc:  # se a UI falhar, nega por seguranca
         sys.stderr.write(f"Falha ao mostrar o popup de aprovacao: {exc}\n")
         choice = "deny"

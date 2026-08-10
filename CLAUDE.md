@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.4.1
+- Versão atual: 0.4.2
 
 ## Como o Claude trabalha neste projeto
 
@@ -85,6 +85,19 @@ e fallback automático.
 
 > Nota: as ferramentas podem demorar a carregar na sessão; se não aparecerem,
 > recarregar/tentar de novo costuma resolver.
+
+**10/08/2026 — segundo teste real: ação executada com sucesso.** `move_mouse`
+moveu o cursor de fato (verificado com `get_mouse_position`) e o usuário clicou
+"Sempre permitir (nesta janela)" — a restrição por janela foi validada em campo
+(`always_allowed: [{tool: move_mouse, window: "Claude"}]`).
+
+Bug de integração encontrado e corrigido (v0.4.2): o popup esperava 300s, mas a
+**ponte do app desktop corta a chamada em ~60s**. Resultado: o chamador recebia
+timeout mesmo com a ação sendo executada depois — e um retry executaria a ação
+DUAS vezes. Agora `_APPROVAL_TIMEOUT` = 45s (env `T2M_APPROVAL_TIMEOUT`), o
+popup se fecha sozinho aos 42s negando, e o erro devolvido diz explicitamente
+que nada foi executado e que tentar de novo é seguro. O popup também mostra um
+contador regressivo.
 
 ## Restrições importantes
 
