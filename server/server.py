@@ -31,6 +31,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -263,18 +264,41 @@ def screenshot(path: str = "") -> dict:
     de decidir onde clicar.
 
     Args:
-        path: Caminho do arquivo PNG de saida. Se vazio, salva em
-              t2m_screenshot.png na pasta atual.
+        path: Caminho do arquivo PNG de saida. Se vazio, salva numa pasta
+              temporaria gravavel (a pasta de trabalho do servidor nem sempre
+              tem permissao de escrita, dependendo de como o plugin foi
+              instalado).
 
     Returns:
         Caminho salvo e o tamanho (largura, altura) da tela em pixels.
     """
     _require_pyautogui()
-    out = path or "t2m_screenshot.png"
+    out = path or os.path.join(tempfile.gettempdir(), "t2m_screenshot.png")
+    out = os.path.abspath(out)
+
+    parent = os.path.dirname(out)
+    if parent and not os.path.isdir(parent):
+        try:
+            os.makedirs(parent, exist_ok=True)
+        except Exception as exc:
+            raise RuntimeError(f"Nao foi possivel criar a pasta {parent!r}: {exc}")
+
     img = pyautogui.screenshot()
-    img.save(out)
-    _audit("screenshot", path=os.path.abspath(out))
-    return {"saved_to": os.path.abspath(out), "size": {"width": img.width, "height": img.height}}
+    try:
+        img.save(out)
+    except PermissionError:
+        # Fallback: se o caminho pedido nao for gravavel, salva no temp.
+        fallback = os.path.join(tempfile.gettempdir(), "t2m_screenshot.png")
+        img.save(fallback)
+        _audit("screenshot_fallback", requested=out, saved=fallback)
+        return {
+            "saved_to": fallback,
+            "size": {"width": img.width, "height": img.height},
+            "aviso": (f"Sem permissao de escrita em {out!r}; "
+                      f"a imagem foi salva em {fallback!r}."),
+        }
+    _audit("screenshot", path=out)
+    return {"saved_to": out, "size": {"width": img.width, "height": img.height}}
 
 
 @mcp.tool()

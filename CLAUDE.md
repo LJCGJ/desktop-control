@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.4.0
+- Versão atual: 0.4.1
 
 ## Como o Claude trabalha neste projeto
 
@@ -69,6 +69,22 @@ Controle de aprovação: `set_approval_mode`, `get_approval_status`,
 - **Failsafe:** mouse no canto superior esquerdo aborta qualquer ação.
 - **Acentos:** `type_text` usa colagem via clipboard (com save/restore) quando há
   caracteres não-ASCII (ç, ã, é…), evitando o problema do typewrite.
+
+## Histórico de testes reais
+
+**10/08/2026 — primeiro teste real (sucesso).** Plugin instalado no app desktop
+via "Fazer upload de plugin" (zip com `.claude-plugin/` na raiz). Descoberta
+importante: as ferramentas ficam acessíveis **até de uma sessão na nuvem**,
+proxiadas pela ponte do dispositivo com o prefixo
+`mcp__remote-devices__plugin_t2m-desktop-control_t2m-desktop-control__*`.
+Funcionaram: `get_approval_status`, `get_screen_size` (1366x768), `list_windows`
+e `screenshot`. Bug encontrado e corrigido (v0.4.1): `screenshot` sem `path`
+falhava com *Permission denied* porque a pasta de trabalho do servidor instalado
+não é gravável — agora o padrão é a pasta temporária, com criação de diretório
+e fallback automático.
+
+> Nota: as ferramentas podem demorar a carregar na sessão; se não aparecerem,
+> recarregar/tentar de novo costuma resolver.
 
 ## Restrições importantes
 

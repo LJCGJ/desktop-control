@@ -1,7 +1,7 @@
 {
   "name": "t2m-desktop-control",
   "description": "Controle de desktop no Windows (mouse, teclado e janelas) com aprovacao estilo Claude Code. Util para automacao de QA de aplicativos desktop.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": {
     "name": "Leonardo Gonzaga Junior"
   },
