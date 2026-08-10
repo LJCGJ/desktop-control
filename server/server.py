@@ -85,14 +85,26 @@ _APPROVAL_SCRIPT = str(Path(__file__).with_name("approval.py"))
 # Segundos de espera pela resposta no popup. Precisa ficar abaixo do timeout de
 # quem chama (a ponte do app desktop corta em ~60s). Ajustavel por env var.
 try:
-    _APPROVAL_TIMEOUT = int(os.environ.get("T2M_APPROVAL_TIMEOUT", "45"))
+    _APPROVAL_TIMEOUT = int(os.environ.get("T2M_APPROVAL_TIMEOUT", "50"))
 except ValueError:
-    _APPROVAL_TIMEOUT = 45
+    _APPROVAL_TIMEOUT = 50
 
-# Modo global: "ask" pede confirmacao; "auto" aprova tudo sem popup.
-_approval_mode: str = os.environ.get("T2M_APPROVAL_MODE", "ask").lower()
-if _approval_mode not in ("ask", "auto"):
-    _approval_mode = "ask"
+# Modo de consentimento.
+#
+#   host (padrao) - QUEM PERGUNTA E O APLICATIVO ANFITRIAO. No MCP, mediar o
+#                   consentimento e papel do cliente (Claude), nao do servidor.
+#                   O app ja tem sua propria configuracao de aprovacao, e o
+#                   usuario ja decidiu ali como quer ser consultado. Abrir um
+#                   segundo pedido aqui duplicaria a pergunta e ignoraria essa
+#                   decisao. Neste modo o servidor executa e apenas REGISTRA.
+#   ask           - o servidor abre seu proprio pedido de permissao. Util em
+#                   clientes que nao mediam chamadas de ferramenta, ou para quem
+#                   quer uma segunda barreira deliberada.
+#   auto          - nao pergunta nada (equivalente a host na pratica; mantido
+#                   por compatibilidade e para deixar a intencao explicita).
+_approval_mode: str = os.environ.get("T2M_APPROVAL_MODE", "host").lower()
+if _approval_mode not in ("host", "ask", "auto"):
+    _approval_mode = "host"
 
 # Aprovacoes permanentes: pares (ferramenta, titulo_da_janela_ativa).
 # Vincular a janela evita que um "Sempre permitir" dado para testar um app
@@ -263,8 +275,13 @@ def _check_approval(tool_name: str, details: str,
     decidir) evita que a permissao seja registrada na janela errada quando o
     usuario troca de janela enquanto le o pedido.
     """
-    if _approval_mode == "auto":
-        _audit("action_auto_approved", tool=tool_name, details=details)
+    if _approval_mode in ("host", "auto"):
+        # Sem pedido proprio: o consentimento ficou a cargo do aplicativo
+        # anfitriao. Ainda assim registramos tudo - auditoria e independente de
+        # quem perguntou, e e o que permite reconstruir o que foi feito.
+        _audit("action_executed", tool=tool_name, details=details,
+               consentimento=_approval_mode,
+               janela=scope or _scope_for(tool_name, x, y))
         return
 
     win = scope or _scope_for(tool_name, x, y)
@@ -317,38 +334,144 @@ def _check_approval(tool_name: str, details: str,
 
 
 @mcp.tool()
-def set_approval_mode(mode: Literal["ask", "auto"]) -> str:
-    """Define como as acoes sao aprovadas (o "dropdown" manual vs automatico).
+def set_approval_mode(mode: Literal["host", "ask", "auto"]) -> str:
+    """Define quem pede o consentimento para as acoes.
 
-    IMPORTANTE (seguranca): mudar para "auto" desliga os popups, entao essa
-    troca EXIGE uma confirmacao sua no popup nativo. O proprio Claude nao
-    consegue afrouxar a seguranca sozinho. Voltar para "ask" e sempre
-    permitido (deixa mais seguro).
+    O padrao e "host": quem pergunta e o aplicativo (Claude), conforme a
+    configuracao de aprovacao que o usuario escolheu la. Este servidor nao
+    duplica a pergunta.
+
+    IMPORTANTE (seguranca): se o usuario tiver ligado o modo "ask" (barreira
+    propria do servidor), sair dele EXIGE confirmacao no proprio pedido - o
+    Claude nao consegue desligar sozinho uma barreira que o usuario ligou.
+    Entrar em "ask" e sempre permitido, porque so aumenta o rigor.
 
     Args:
-        mode: "ask" = pedir confirmacao a cada acao (padrao, mais seguro);
-              "auto" = aprovar todas as acoes automaticamente, sem popup.
+        mode: "host" = o aplicativo anfitriao pergunta (padrao);
+              "ask"  = este servidor abre seu proprio pedido de permissao;
+              "auto" = ninguem pergunta.
 
     Returns:
         Confirmacao do modo ativo.
     """
     global _approval_mode
-    if mode == "auto" and _approval_mode != "auto":
+    if mode != "ask" and _approval_mode == "ask":
         # Exige confirmacao humana explicita para afrouxar a seguranca.
         choice = _prompt_user(
-            "ATIVAR MODO AUTOMATICO",
-            "O Claude quer DESLIGAR os pedidos de permissao e passar a executar "
-            "TODAS as acoes automaticamente. Confirme apenas se voce tem certeza.",
+            "DESLIGAR A BARREIRA DO SERVIDOR",
+            f"O Claude quer sair do modo 'ask' e passar para '{mode}', ou seja, "
+            "este servidor deixaria de pedir permissao por conta propria. "
+            "Confirme apenas se voce tem certeza.",
         )
         if choice not in ("once", "always"):
-            _audit("auto_mode_change_denied")
+            _audit("mode_change_denied", tentativa=mode)
             return (
-                "Mudanca para o modo 'auto' NEGADA. O modo continua 'ask' "
-                "(cada acao ainda pede confirmacao)."
+                f"Mudanca para o modo '{mode}' NEGADA. O modo continua 'ask' "
+                "(cada acao ainda pede confirmacao neste servidor)."
             )
     _approval_mode = mode
     _audit("approval_mode_changed", mode=mode)
     return f"Modo de aprovacao definido para '{mode}'."
+
+
+@mcp.tool()
+def diagnostico() -> dict:
+    """Coleta informacoes sobre o ambiente em que ESTE servidor esta rodando.
+
+    Serve para investigar por que um popup de aprovacao pode nao aparecer:
+    compara o contexto do processo do servidor com o de um terminal comum e
+    testa, de fato, se uma janela grafica consegue ser criada aqui.
+
+    Acao apenas de leitura, nao pede aprovacao.
+    """
+    info: dict = {
+        "processo": {
+            "pid": os.getpid(),
+            "executavel_python": sys.executable,
+            "versao_python": sys.version.split()[0],
+            "pasta_de_trabalho": os.getcwd(),
+            "arquivo_do_servidor": str(Path(__file__).resolve()),
+        },
+        "ambiente": {
+            "usuario": os.environ.get("USERNAME", "?"),
+            "sessao": os.environ.get("SESSIONNAME", "?"),
+            "perfil": os.environ.get("USERPROFILE", "?"),
+            "modo_aprovacao": _approval_mode,
+            "timeout_aprovacao_s": _APPROVAL_TIMEOUT,
+        },
+        "pyautogui_disponivel": pyautogui is not None,
+    }
+
+    # Teste 1: dá para criar uma janela grafica a partir daqui?
+    prova = (
+        "import tkinter; r = tkinter.Tk(); r.withdraw(); "
+        "print('TK_OK'); r.destroy()"
+    )
+    try:
+        p = subprocess.run([sys.executable, "-c", prova],
+                           capture_output=True, text=True, timeout=8)
+        info["teste_janela_grafica"] = {
+            "resultado": "ok" if "TK_OK" in (p.stdout or "") else "falhou",
+            "saida": (p.stdout or "").strip()[:200],
+            "erro": (p.stderr or "").strip()[:300],
+            "codigo_retorno": p.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        info["teste_janela_grafica"] = {
+            "resultado": "travou",
+            "detalhe": ("A criacao da janela nao retornou em 8s. Indica que este "
+                        "processo nao tem acesso a area de trabalho interativa."),
+        }
+    except Exception as exc:
+        info["teste_janela_grafica"] = {"resultado": "erro", "detalhe": str(exc)}
+
+    # Teste 1b: a caixa de dialogo NATIVA do Windows aparece daqui?
+    prova_nativa = (
+        "import ctypes; from ctypes import wintypes; u=ctypes.windll.user32; "
+        "f=u.MessageBoxTimeoutW; "
+        "f.argtypes=[wintypes.HWND,wintypes.LPCWSTR,wintypes.LPCWSTR,"
+        "wintypes.UINT,wintypes.WORD,wintypes.DWORD]; "
+        "r=f(None,'Teste do plugin. Fecha sozinha em 5s.',"
+        "'Claude - teste',0x00041030,0,5000); print('MB_RESULT=%d'%r)"
+    )
+    try:
+        p = subprocess.run([sys.executable, "-c", prova_nativa],
+                           capture_output=True, text=True, timeout=12)
+        saida = (p.stdout or "").strip()
+        info["teste_dialogo_nativo"] = {
+            "resultado": "ok" if "MB_RESULT=" in saida else "falhou",
+            "saida": saida[:120],
+            "erro": (p.stderr or "").strip()[:300],
+            "observacao": ("MB_RESULT=32000 significa que fechou por tempo "
+                           "(ninguem clicou) - o que ja prova que ela apareceu."),
+        }
+    except subprocess.TimeoutExpired:
+        info["teste_dialogo_nativo"] = {"resultado": "travou"}
+    except Exception as exc:
+        info["teste_dialogo_nativo"] = {"resultado": "erro", "detalhe": str(exc)}
+
+    # Teste 2: o proprio popup de aprovacao, com prazo curto
+    try:
+        p = subprocess.run(
+            [sys.executable, _APPROVAL_SCRIPT, "DIAGNOSTICO",
+             "Janela de teste - pode ignorar, fecha sozinha.", "6"],
+            capture_output=True, text=True, timeout=12)
+        info["teste_popup_aprovacao"] = {
+            "resultado": (p.stdout or "").strip()[:100] or "(sem saida)",
+            "erro": (p.stderr or "").strip()[:300],
+            "codigo_retorno": p.returncode,
+        }
+    except subprocess.TimeoutExpired:
+        info["teste_popup_aprovacao"] = {
+            "resultado": "travou",
+            "detalhe": ("O popup nao respondeu nem se fechou sozinho. Confirma "
+                        "que a janela nao chega a ser criada neste contexto."),
+        }
+    except Exception as exc:
+        info["teste_popup_aprovacao"] = {"resultado": "erro", "detalhe": str(exc)}
+
+    _audit("diagnostico", **{"tk": info.get("teste_janela_grafica", {}).get("resultado")})
+    return info
 
 
 @mcp.tool()
@@ -367,14 +490,15 @@ def get_approval_status() -> dict:
 
 @mcp.tool()
 def reset_approvals() -> str:
-    """Revoga todas as aprovacoes de 'Sempre permitir' e volta o modo para
-    'ask'. Use para "esquecer" tudo que foi autorizado antes.
+    """Revoga as liberacoes de 'Sempre permitir' e liga a barreira propria
+    do servidor (modo 'ask'). Use para "esquecer" tudo que foi autorizado.
     """
     global _approval_mode
     _always_allowed.clear()
     _approval_mode = "ask"
     _audit("approvals_reset")
-    return "Aprovacoes revogadas. Modo voltou para 'ask'."
+    return ("Liberacoes revogadas. O servidor passou a pedir permissao por "
+            "conta propria (modo 'ask'), alem do que o aplicativo ja pergunta.")
 
 
 # ---------------------------------------------------------------------------

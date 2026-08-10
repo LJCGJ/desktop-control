@@ -32,9 +32,11 @@ mudam, e um clique no lugar errado num app de verdade pode ter consequências.
    agir sobre uma janela específica, use `list_windows` para localizá-la e
    `focus_window` para trazê-la à frente. Nunca presuma onde os elementos estão.
 
-2. **Agir.** Execute uma ação (`click`, `type_text`, `press_keys`, etc.). Cada
-   ação vai pedir aprovação ao usuário via popup — isso é esperado e saudável.
-   Aja de forma pequena e deliberada, uma etapa por vez.
+2. **Agir.** Execute uma ação (`click`, `type_text`, `press_keys`, etc.). Quem
+   pede autorização é o aplicativo anfitrião, conforme a configuração escolhida
+   pelo usuário — o servidor não abre um segundo pedido. Aja de forma pequena e
+   deliberada, uma etapa por vez: é isso que mantém o teste auditável e permite
+   parar no ponto certo quando algo dá errado.
 
    **Sempre informe o parâmetro `window`** com um trecho do título da janela que
    você está testando (ex: `window="T2M Security"`). Isso não é burocracia: uma
@@ -50,8 +52,8 @@ mudam, e um clique no lugar errado num app de verdade pode ter consequências.
    tela mudou como deveria? Apareceu uma mensagem de erro? Um campo ficou
    vermelho? É aqui que o teste de fato acontece — a verificação, não o clique.
 
-Se em algum momento uma ação for **negada** no popup, pare, não tente burlar, e
-registre no relatório que aquele passo não foi executado por decisão do usuário.
+Se em algum momento uma ação for **negada**, pare, não tente burlar, e registre
+no relatório que aquele passo não foi executado por decisão do usuário.
 
 ## Antes de começar: entenda o que testar
 

@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.6.0
+- Versão atual: 0.8.0
 
 ## Como o Claude trabalha neste projeto
 
@@ -132,6 +132,74 @@ clicar. A skill foi atualizada para sempre passar `window`.
 > Padrão que vale lembrar: quando um agente e um humano compartilham a mesma
 > tela, o foco muda o tempo todo. Qualquer ação que dependa de "o que está em
 > foco" é uma corrida — declare o alvo e verifique antes de agir.
+
+## Consentimento é do aplicativo anfitrião (v0.8.0) — decisão de arquitetura
+
+Ideia do Leonardo, e ele estava certo: se o app do Claude já tem configuração de
+aprovação (manual / automática / ignorar tudo), por que o servidor abre um
+**segundo** pedido? No MCP quem media o consentimento é o cliente; o servidor
+expõe capacidades e executa. O popup próprio duplicava a pergunta, ignorava a
+escolha já feita pelo usuário, e — não por acaso — foi a origem de quase todos os
+problemas de 10/08 (contexto gráfico, monitor errado, timeouts, travamento).
+
+Modo padrão passou a ser `host`: sem pedido próprio. `T2M_APPROVAL_MODE` aceita
+`host` (padrão), `ask` (barreira própria, para clientes que não mediam) e `auto`.
+Sair de `ask` exige confirmação do usuário; entrar em `ask` é livre.
+
+**O que foi mantido, porque não é consentimento e sim segurança de execução:**
+verificação de que a janela alvo está sob o ponto antes de clicar, log de
+auditoria (agora registra `action_executed` com o modo de consentimento e a
+janela), mascaramento de texto sensível, e o failsafe do PyAutoGUI.
+
+Para submissão na loja, esta é uma história melhor: "o plugin delega o
+consentimento ao anfitrião, como o MCP prevê, e acrescenta auditoria e
+verificação de alvo" — em vez de "o plugin abre diálogos próprios do sistema".
+
+## Popup de aprovação (modo `ask`): diálogo nativo, não tkinter (v0.7.0)
+
+O `tkinter.Tk()` **trava** quando o servidor roda em contexto restrito — provado
+pela ferramenta `diagnostico` (não retorna em 8s). Isso aconteceu tanto com o
+servidor registrado por configuração quanto, mais tarde, com o plugin. Sintoma
+para o usuário: nenhuma janela aparece em nenhum monitor e a ação expira.
+
+Em v0.7.0 o `approval.py` usa primeiro a **caixa de diálogo nativa do Windows**
+(`MessageBoxTimeoutW` via ctypes) — chamada direta ao user32, sem inicializar
+toolkit gráfico. Mapeamento dos botões: **Sim** = sempre permitir nesta janela,
+**Não** = permitir uma vez, **Cancelar** = negar. O tkinter ficou como
+alternativa, e se ambos falharem o retorno é `deny`.
+
+> Comportamento correto observado no meio do problema: mesmo sem conseguir
+> perguntar, o plugin **não executou nada** — falhou fechado. Vale citar isso
+> numa eventual submissão de segurança.
+
+## ⚠️ INSTALAR COMO PLUGIN, NÃO PELO claude_desktop_config.json
+
+**Descoberta de 10/08/2026, com evidência da ferramenta `diagnostico`.** Tentamos
+registrar o servidor apontando para a pasta do projeto (via
+`claude_desktop_config.json`) para agilizar a iteração. O servidor sobe e as
+ferramentas de leitura funcionam, **mas o popup de aprovação nunca aparece**.
+
+O `diagnostico` mostrou por quê: nesse contexto o processo roda com
+`SESSIONNAME` vazio e `cwd = C:\WINDOWS\system32`, e tanto criar um `tkinter.Tk()`
+quanto abrir o popup **travam** (não retornam em 8s) — o processo não tem acesso
+à área de trabalho interativa. Instalado **como plugin**, o mesmo código exibe os
+popups normalmente (validado em uso real).
+
+Consequência prática: sem popup não há como aprovar nada, e nem como trocar para
+o modo `auto` (essa troca também exige confirmação por popup). Portanto: **use a
+instalação como plugin**. O `.mcp.json` e o `configurar-mcp.ps1` continuam no
+repositório para uso com o Claude Code (terminal), onde o servidor roda na sessão
+interativa do usuário.
+
+Ciclo de atualização do plugin (aprendido na prática): **desinstalar** o plugin
+antigo → "Fazer upload de plugin" com o zip novo → **fechar o app pela bandeja**
+e reabrir. Sem desinstalar, o upload não substitui; sem reiniciar, o processo
+antigo continua no ar.
+
+> Melhoria futura para robustez: tirar o popup do processo do servidor e usar um
+> pequeno aplicativo de aprovação rodando na sessão do usuário (bandeja),
+> conversando com o servidor por arquivo ou porta local. Resolveria de vez,
+> inclusive se o servidor rodar como serviço.
 
 ## Restrições importantes
 

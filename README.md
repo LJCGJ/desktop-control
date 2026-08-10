@@ -50,6 +50,18 @@ Se preferir não ver popups, troque o modo para automático (com `set_approval_m
 
 ---
 
+## Quem pede permissão
+
+**O aplicativo anfitrião, não este servidor.** No MCP, mediar o consentimento é papel do cliente: o Claude já tem sua própria configuração de aprovação, e é ali que você decide como quer ser consultado. Este plugin respeita essa decisão em vez de abrir um segundo pedido — perguntar duas vezes seria redundante e ignoraria a escolha que você já fez.
+
+O modo é controlado por `T2M_APPROVAL_MODE`:
+
+- `host` (padrão) — o aplicativo pergunta; o servidor executa e registra.
+- `ask` — o servidor abre seu próprio pedido de permissão, como barreira adicional. Útil em clientes que não mediam chamadas de ferramenta.
+- `auto` — ninguém pergunta.
+
+Se você ligar o modo `ask`, o Claude **não consegue desligá-lo sozinho**: sair desse modo exige confirmação sua.
+
 ## Segurança embutida
 
 - **O Claude não consegue desligar a própria trava.** Trocar para o modo `auto` (sem popups) exige uma confirmação sua no popup nativo — o modelo não afrouxa a segurança sozinho. Voltar para `ask` é sempre livre.
