@@ -53,6 +53,7 @@ Se preferir não ver popups, troque o modo para automático (com `set_approval_m
 ## Segurança embutida
 
 - **O Claude não consegue desligar a própria trava.** Trocar para o modo `auto` (sem popups) exige uma confirmação sua no popup nativo — o modelo não afrouxa a segurança sozinho. Voltar para `ask` é sempre livre.
+- **"Sempre permitir" é restrito à janela.** Ao liberar permanentemente uma ferramenta, a liberação vale só enquanto a janela que estava em foco continuar ativa (ex: só age no T2M Security). Se o foco mudar para outra janela, o Claude pede permissão de novo — uma autorização não vaza para o resto do sistema.
 - **Log de auditoria.** Toda ação e decisão de aprovação é gravada em `t2m_audit.log` (uma linha JSON por evento). Configure o caminho com `T2M_AUDIT_LOG`.
 - **Texto sensível.** `type_text(..., sensitive=True)` não mostra o conteúdo no popup nem no log — use para senhas.
 - **Failsafe.** Mouse no canto superior esquerdo aborta qualquer ação.
@@ -93,4 +94,3 @@ Este projeto já está estruturado como plugin (`.claude-plugin/plugin.json`). P
 ## Licença
 
 MIT — veja o arquivo `LICENSE`.
-# desktop-control

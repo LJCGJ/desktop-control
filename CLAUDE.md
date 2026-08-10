@@ -16,7 +16,7 @@ em especial o app **T2M Security**.
 - Repositório: https://github.com/LJCGJ/desktop-control
 - Pasta local: `C:\Users\LeonardoJoseCordeiro\Documents\t2m-desktop-control`
 - Máquina de desenvolvimento: Windows (device `t2m0249`), editor VS Code
-- Versão atual: 0.3.0
+- Versão atual: 0.4.0
 
 ## Como o Claude trabalha neste projeto
 
@@ -57,7 +57,9 @@ Controle de aprovação: `set_approval_mode`, `get_approval_status`,
 - Modos: `ask` (padrão, pede confirmação a cada ação) e `auto` (sem popups).
 - Popup nativo com 3 opções: Permitir uma vez / Sempre permitir esta ferramenta /
   Negar. Fechar no X ou Esc = negar; Enter = permitir uma vez.
-- "Sempre permitir" memoriza por ferramenta durante a sessão.
+- "Sempre permitir" memoriza por ferramenta **e por janela ativa** (v0.4.0):
+  a liberação só vale enquanto a janela em foco no momento da aprovação seguir
+  ativa. Muda o foco, reaprova.
 - **O modelo NÃO consegue afrouxar a própria segurança:** mudar para `auto` exige
   confirmação humana no popup. Voltar para `ask` é livre.
 - **Log de auditoria** em `t2m_audit.log` (uma linha JSON por evento). Caminho
@@ -77,8 +79,10 @@ Controle de aprovação: `set_approval_mode`, `get_approval_status`,
 ## Pendências / próximos passos
 
 Da revisão de código (itens ainda abertos, prioridade baixa):
-- [ ] #4 — "Sempre permitir" é grosso (libera a ferramenta em qualquer contexto).
-  Ideia: restringir por janela (ex: só age quando a janela ativa é o T2M Security).
+- [x] #4 — FEITO (v0.4.0). "Sempre permitir" agora é vinculado à janela ativa:
+  `_always_allowed` guarda pares (ferramenta, título_janela) e `_active_window_key()`
+  usa `pygetwindow.getActiveWindow()`. Se o foco muda, reaprovar. Sem janela
+  detectada, "always" vira "uma vez" por segurança.
 - [x] Skill de QA — FEITA (v0.3.0). Em `skills/qa-desktop/`. Ainda não testada
   na prática com o app real; iterar conforme o feedback do primeiro uso.
 

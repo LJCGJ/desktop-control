@@ -92,7 +92,7 @@ def ask(tool_name: str, details: str) -> str:
 
     tk.Button(
         btn_row,
-        text="Sempre permitir esta ferramenta",
+        text="Sempre permitir (nesta janela)",
         width=28,
         command=lambda: choose("always"),
     ).pack(side="right")

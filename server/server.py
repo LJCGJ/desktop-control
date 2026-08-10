@@ -85,12 +85,30 @@ _approval_mode: str = os.environ.get("T2M_APPROVAL_MODE", "ask").lower()
 if _approval_mode not in ("ask", "auto"):
     _approval_mode = "ask"
 
-# Ferramentas que o usuario marcou como "Sempre permitir esta ferramenta".
-_always_allowed: set[str] = set()
+# Aprovacoes permanentes: pares (ferramenta, titulo_da_janela_ativa).
+# Vincular a janela evita que um "Sempre permitir" dado para testar um app
+# vaze para o resto do sistema. Ex: liberar 'click' com o T2M Security em foco
+# NAO libera cliques quando outra janela esta ativa.
+_always_allowed: set[tuple[str, str]] = set()
 
 
 class ActionDenied(Exception):
     """Levantada quando o usuario nega uma acao."""
+
+
+def _active_window_key() -> str | None:
+    """Retorna o titulo da janela ativa (foreground), ou None se nao der pra
+    determinar. Serve de "escopo" para as aprovacoes de 'Sempre permitir'.
+    """
+    try:
+        import pygetwindow as gw
+        w = gw.getActiveWindow()
+        if w is None:
+            return None
+        title = (w.title or "").strip()
+        return title or None
+    except Exception:
+        return None
 
 
 def _require_pyautogui() -> None:
@@ -119,22 +137,47 @@ def _prompt_user(tool_name: str, details: str) -> str:
 
 
 def _check_approval(tool_name: str, details: str) -> None:
-    """Aplica a politica de aprovacao. Levanta ActionDenied se negado."""
+    """Aplica a politica de aprovacao. Levanta ActionDenied se negado.
+
+    O "Sempre permitir" e vinculado a janela ativa: so pula o popup se a MESMA
+    ferramenta ja foi liberada permanentemente COM A MESMA janela em foco.
+    """
     if _approval_mode == "auto":
         _audit("action_auto_approved", tool=tool_name, details=details)
         return
-    if tool_name in _always_allowed:
-        _audit("action_pre_approved", tool=tool_name, details=details)
+
+    win = _active_window_key()
+
+    # Ja liberado permanentemente para esta ferramenta NESTA janela?
+    if win is not None and (tool_name, win) in _always_allowed:
+        _audit("action_pre_approved", tool=tool_name, window=win, details=details)
         return
-    choice = _prompt_user(tool_name, details)
+
+    # Mostra ao usuario a qual janela o "Sempre permitir" ficaria restrito.
+    if win:
+        scope_note = f"\n\nJanela ativa: {win}\n(\"Sempre permitir\" vale so para esta janela.)"
+    else:
+        scope_note = ("\n\n(Janela ativa nao detectada - \"Sempre permitir\" "
+                      "vai valer apenas UMA vez, por seguranca.)")
+
+    choice = _prompt_user(tool_name, details + scope_note)
+
     if choice == "always":
-        _always_allowed.add(tool_name)
-        _audit("action_approved", tool=tool_name, details=details, scope="always")
+        if win is not None:
+            _always_allowed.add((tool_name, win))
+            _audit("action_approved", tool=tool_name, details=details,
+                   scope="always", window=win)
+        else:
+            # Sem janela identificada, nao da pra restringir o escopo com
+            # seguranca: trata como "uma vez".
+            _audit("action_approved", tool=tool_name, details=details,
+                   scope="once_no_window")
         return
     if choice == "once":
-        _audit("action_approved", tool=tool_name, details=details, scope="once")
+        _audit("action_approved", tool=tool_name, details=details,
+               scope="once", window=win)
         return
-    _audit("action_denied", tool=tool_name, details=details)
+    _audit("action_denied", tool=tool_name, details=details, window=win)
     raise ActionDenied(
         f"Acao '{tool_name}' negada pelo usuario. "
         "Nada foi executado no computador."
@@ -188,7 +231,9 @@ def get_approval_status() -> dict:
     """
     return {
         "mode": _approval_mode,
-        "always_allowed_tools": sorted(_always_allowed),
+        "always_allowed": [
+            {"tool": tool, "window": win} for (tool, win) in sorted(_always_allowed)
+        ],
         "audit_log": _AUDIT_LOG,
     }
 
