@@ -78,12 +78,30 @@ incluindo um `.gitignore` interno (`*` + `!.gitignore`) que renasce junto,
 então nada dali vai para o git nem depois da recriação. Fallback para
 `%TEMP%\t2m-capturas` se a pasta padrão não for gravável; override via
 `T2M_SCREENSHOT_DIR`. O `.gitignore` da raiz também ganhou `capturas/`.
-STATUS: gravado e compilado; TESTE EM CAMPO PENDENTE (reiniciar o app pela
-bandeja → `get_approval_status` deve dizer 0.8.4 → `screenshot()` sem path
-deve criar `capturas/` com `.gitignore` e nome timestampado).
+STATUS: VALIDADO EM CAMPO em 11/08 ~09h55, junto com a v0.8.5.
 
-**Pendências que restam:** (1) itens de "Publicação" e nomenclatura abaixo;
-(2) teste em campo da v0.8.4 (acima).
+**v0.8.5 — correções da revisão pré-submissão (11/08), VALIDADA EM CAMPO.**
+Da revisão de código antes da submissão à Anthropic: (1) ALTA: `screenshot`
+sobrescrevia silenciosamente arquivo existente em qualquer caminho gravável
+— sendo ferramenta de leitura, sem aprovação; agora NUNCA sobrescreve
+(colisão → sufixo numérico + `aviso_nome` no resultado). (2) MÉDIA: se o
+caminho do audit log não fosse gravável, a auditoria sumia em silêncio;
+agora cai permanentemente para `%TEMP%\t2m_audit.log` (caminho efetivo em
+`get_approval_status`). (3) Docs: "15 ferramentas" → 16. Higiene do repo
+feita pelo Leonardo (commit 41b0cdd): `git rm --cached` do audit log,
+`__pycache__` e zip.
+
+Bateria de teste em campo (11/08 ~09h55, tudo PASSOU):
+`get_approval_status` → 0.8.5; `screenshot()` → criou `capturas/` com
+`.gitignore` interno (`*` + `!.gitignore`) e `t2m_20260811_095456.png`, all
+monitors 2966x900 origin (0,-38); path relativo `teste-rel.png` → dentro de
+`capturas/`; repetido → `teste-rel_2.png` com aviso (anti-sobrescrita OK);
+`monitor="primary"` → 1366x768 origin (0,0); `get_screen_size` →
+`virtual_screen` correto. Recriação da pasta após exclusão e fallback do
+audit validados por teste unitário na sandbox.
+
+**Pendências que restam:** (1) commitar a v0.8.5 (Leonardo); (2) itens de
+"Publicação" e nomenclatura abaixo — próximo passo: submissão à Anthropic.
 
 Nota de 10/08 ~17h55: a versão do app foi obtida com o PRÓPRIO plugin
 navegando em Configurações do Windows → Aplicativos instalados → Claude →
@@ -118,7 +136,7 @@ em especial o app **T2M Security**.
 
 ## Arquitetura
 
-- `server/server.py` — servidor FastMCP com 15 ferramentas. Contém toda a lógica
+- `server/server.py` — servidor FastMCP com 16 ferramentas. Contém toda a lógica
   de aprovação, auditoria e as ferramentas de controle.
 - `server/approval.py` — popup nativo de aprovação (tkinter), executado como
   **processo separado** para não conflitar com a thread stdio do servidor.
@@ -132,10 +150,10 @@ em especial o app **T2M Security**.
   bug-report-template.md). Ensina o Claude a testar apps de forma metódica
   (ciclo Observar → Agir → Verificar) e a gerar relatório de bugs.
 
-## Ferramentas (15)
+## Ferramentas (16)
 
 Leitura (não pedem aprovação): `screenshot`, `get_screen_size`,
-`get_mouse_position`, `locate_on_screen`, `list_windows`.
+`get_mouse_position`, `locate_on_screen`, `list_windows`, `diagnostico`.
 
 Ação (pedem aprovação): `move_mouse`, `click`, `type_text`, `press_keys`,
 `scroll`, `drag`, `focus_window`.

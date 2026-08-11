@@ -55,7 +55,7 @@ mcp = FastMCP("t2m-desktop-control")
 # porque descobrir "qual versao esta realmente rodando" foi uma fonte recorrente
 # de confusao: o app mantem o processo antigo vivo ate reiniciar, e um zip
 # antigo na pasta de downloads e facil de subir por engano.
-VERSAO = "0.8.4"
+VERSAO = "0.8.5"
 
 # ---------------------------------------------------------------------------
 # Log de auditoria
@@ -68,18 +68,32 @@ _AUDIT_LOG = os.environ.get(
 
 
 def _audit(event: str, **data) -> None:
-    """Registra um evento no log de auditoria (uma linha JSON por evento)."""
+    """Registra um evento no log de auditoria (uma linha JSON por evento).
+
+    Se o caminho padrao nao for gravavel (ex.: plugin instalado numa pasta
+    protegida), muda de vez para um arquivo no diretorio temporario - auditoria
+    capenga e melhor que auditoria nenhuma, e sumir em silencio seria pior.
+    O caminho efetivo aparece em get_approval_status().
+    """
+    global _AUDIT_LOG
     entry = {
         "ts": datetime.datetime.now().isoformat(timespec="seconds"),
         "event": event,
         **data,
     }
+    line = json.dumps(entry, ensure_ascii=False) + "\n"
     try:
         with open(_AUDIT_LOG, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            fh.write(line)
     except Exception:
-        # Nunca deixar o log quebrar a execucao da ferramenta.
-        pass
+        fallback = os.path.join(tempfile.gettempdir(), "t2m_audit.log")
+        try:
+            with open(fallback, "a", encoding="utf-8") as fh:
+                fh.write(line)
+            _AUDIT_LOG = fallback
+        except Exception:
+            # Nunca deixar o log quebrar a execucao da ferramenta.
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -694,10 +708,11 @@ def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> di
     Args:
         path: Caminho do arquivo PNG de saida. Se VAZIO, salva na pasta de
               capturas (por padrao 'capturas/' na raiz do projeto/plugin) com
-              nome timestampado - nada e sobrescrito. Caminho RELATIVO e
-              resolvido dentro dessa mesma pasta. A pasta e descartavel:
-              pode ser apagada inteira para limpeza, o servidor a recria
-              (com um .gitignore proprio) na captura seguinte.
+              nome timestampado. Caminho RELATIVO e resolvido dentro dessa
+              mesma pasta. A pasta e descartavel: pode ser apagada inteira
+              para limpeza, o servidor a recria (com um .gitignore proprio)
+              na captura seguinte. NUNCA sobrescreve arquivo existente: em
+              caso de colisao, salva com sufixo numerico e avisa.
         monitor: "all" (padrao) captura todos os monitores; "primary" captura
                  so o monitor principal (comportamento das versoes <= 0.8.2).
 
@@ -714,6 +729,25 @@ def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> di
     else:
         out = os.path.join(_ensure_screenshot_dir(), path)
     out = os.path.abspath(out)
+
+    # NUNCA sobrescrever um arquivo existente. screenshot e uma ferramenta de
+    # leitura (nao pede aprovacao), entao escrever por cima de um arquivo do
+    # usuario seria uma acao destrutiva sem consentimento. Havendo colisao,
+    # renomeia com um sufixo numerico e informa no resultado.
+    renomeado_de = None
+    if os.path.exists(out):
+        raiz, ext = os.path.splitext(out)
+        for i in range(2, 1000):
+            candidato = f"{raiz}_{i}{ext or '.png'}"
+            if not os.path.exists(candidato):
+                renomeado_de = out
+                out = candidato
+                break
+        else:
+            raise RuntimeError(
+                f"Ja existe um arquivo em {out!r} (e em todas as variantes "
+                "numeradas). Nada foi sobrescrito - escolha outro nome."
+            )
 
     parent = os.path.dirname(out)
     if parent and not os.path.isdir(parent):
@@ -751,6 +785,11 @@ def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> di
         "nota": ("coordenada de tela = pixel da imagem + origin "
                  "(origin pode ser negativo com multiplos monitores)"),
     }
+    if renomeado_de:
+        result["aviso_nome"] = (
+            f"Ja existia um arquivo em {renomeado_de!r}; para nao sobrescrever, "
+            f"a captura foi salva com sufixo numerico."
+        )
     try:
         img.save(out)
     except PermissionError:

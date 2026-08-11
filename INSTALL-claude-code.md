@@ -36,7 +36,7 @@ Abra o Claude Code e rode:
 /mcp
 ```
 
-Você deve ver `t2m-desktop-control` conectado e as 15 ferramentas listadas.
+Você deve ver `t2m-desktop-control` conectado e as 16 ferramentas listadas.
 
 ## 6. Use
 
