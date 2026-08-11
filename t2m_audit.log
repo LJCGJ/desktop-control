@@ -1,0 +1,82 @@
+{"ts": "2026-08-10T14:27:53", "event": "server_start", "mode": "ask", "pyautogui": true}
+{"ts": "2026-08-10T14:27:54", "event": "server_start", "mode": "ask", "pyautogui": true}
+{"ts": "2026-08-10T14:29:34", "event": "approval_timeout", "tool": "click", "seconds": 45}
+{"ts": "2026-08-10T14:30:29", "event": "approval_timeout", "tool": "click", "seconds": 45}
+{"ts": "2026-08-10T14:33:17", "event": "approval_timeout", "tool": "click", "seconds": 45}
+{"ts": "2026-08-10T14:37:52", "event": "approval_timeout", "tool": "click", "seconds": 45}
+{"ts": "2026-08-10T14:41:18", "event": "server_start", "mode": "ask", "pyautogui": true}
+{"ts": "2026-08-10T14:41:19", "event": "server_start", "mode": "ask", "pyautogui": true}
+{"ts": "2026-08-10T14:42:12", "event": "diagnostico", "tk": "travou"}
+{"ts": "2026-08-10T14:54:59", "event": "diagnostico", "tk": "travou"}
+{"ts": "2026-08-10T15:48:09", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-10T17:31:48", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-10T17:31:48", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-10T17:33:04", "event": "screenshot", "path": "C:\\Users\\LEONAR~1\\AppData\\Local\\Temp\\t2m_screenshot.png"}
+{"ts": "2026-08-10T17:33:33", "event": "action_executed", "tool": "focus_window", "details": "Focar a janela: 'T2M Security Manager v4.2 (MCP Edition)'", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:33:33", "event": "focus_window", "janela": "T2M Security Manager v4.2 (MCP Edition)", "primeiro_plano": true}
+{"ts": "2026-08-10T17:33:38", "event": "action_executed", "tool": "press_keys", "details": "Apertar teclas: win + shift + left na janela 'T2M Security Manager v4.2 (MCP Edition)'", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:33:54", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (1900, 50) na janela 'T2M Security Manager v4.2 (MCP Edition)'.", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:33:55", "event": "click", "x": 1900, "y": 50, "button": "left", "clicks": 1, "window": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:33:59", "event": "action_executed", "tool": "press_keys", "details": "Apertar teclas: win + shift + left na janela 'T2M Security Manager v4.2 (MCP Edition)'", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:34:19", "event": "action_executed", "tool": "drag", "details": "Arrastar de (1900, 50) para (600, 60).", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:34:28", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-resume-01.png"}
+{"ts": "2026-08-10T17:34:47", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (942, 110) na janela 'T2M Security Manager v4.2 (MCP Edition)'.", "consentimento": "host", "janela": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:34:48", "event": "click", "x": 942, "y": 110, "button": "left", "clicks": 1, "window": "T2M Security Manager v4.2 (MCP Edition)"}
+{"ts": "2026-08-10T17:34:51", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-resume-02.png"}
+{"ts": "2026-08-10T17:35:08", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (916, 659) na janela 'Configuracoes'.", "consentimento": "host", "janela": "Configuracoes"}
+{"ts": "2026-08-10T17:35:09", "event": "click", "x": 916, "y": 659, "button": "left", "clicks": 1, "window": "Configuracoes"}
+{"ts": "2026-08-10T17:50:13", "event": "action_executed", "tool": "focus_window", "details": "Focar a janela: 'Claude'", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:50:13", "event": "focus_window", "janela": "Claude", "primeiro_plano": true}
+{"ts": "2026-08-10T17:50:16", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-01.png"}
+{"ts": "2026-08-10T17:50:34", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (60, 692) na janela 'Claude'.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:50:34", "event": "click", "x": 60, "y": 692, "button": "left", "clicks": 1, "window": "Claude"}
+{"ts": "2026-08-10T17:50:38", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-02.png"}
+{"ts": "2026-08-10T17:50:55", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (89, 424) na janela 'Claude'.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:50:55", "event": "click", "x": 89, "y": 424, "button": "left", "clicks": 1, "window": "Claude"}
+{"ts": "2026-08-10T17:50:59", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-03.png"}
+{"ts": "2026-08-10T17:51:21", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (263, 497) na janela 'Claude'.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:51:21", "event": "click", "x": 263, "y": 497, "button": "left", "clicks": 1, "window": "Claude"}
+{"ts": "2026-08-10T17:51:24", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-04.png"}
+{"ts": "2026-08-10T17:51:43", "event": "action_executed", "tool": "scroll", "details": "Rolar a tela em -1200.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:51:47", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-05.png"}
+{"ts": "2026-08-10T17:52:13", "event": "action_executed", "tool": "scroll", "details": "Rolar a tela em -600.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:52:17", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-06.png"}
+{"ts": "2026-08-10T17:52:35", "event": "action_executed", "tool": "drag", "details": "Arrastar de (1157, 250) para (1157, 700).", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:52:40", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-07.png"}
+{"ts": "2026-08-10T17:52:56", "event": "action_executed", "tool": "drag", "details": "Arrastar de (1157, 500) para (1157, 700).", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:53:02", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-08.png"}
+{"ts": "2026-08-10T17:53:37", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (650, 227) na janela 'Claude'.", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:53:38", "event": "click", "x": 650, "y": 227, "button": "left", "clicks": 1, "window": "Claude"}
+{"ts": "2026-08-10T17:53:41", "event": "action_executed", "tool": "press_keys", "details": "Apertar teclas: end na janela 'Claude'", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:53:44", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-09.png"}
+{"ts": "2026-08-10T17:54:12", "event": "action_executed", "tool": "drag", "details": "Arrastar de (1157, 640) para (1157, 720).", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:54:17", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-10.png"}
+{"ts": "2026-08-10T17:54:38", "event": "action_executed", "tool": "focus_window", "details": "Focar a janela: 'Configurações'", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:54:38", "event": "focus_window", "janela": "Configurações", "primeiro_plano": true}
+{"ts": "2026-08-10T17:54:42", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-11.png"}
+{"ts": "2026-08-10T17:55:06", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (105, 361) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:55:07", "event": "click", "x": 105, "y": 361, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:55:11", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-12.png"}
+{"ts": "2026-08-10T17:55:25", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (458, 150) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:55:26", "event": "click", "x": 458, "y": 150, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:55:31", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-13.png"}
+{"ts": "2026-08-10T17:55:43", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (515, 127) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:55:43", "event": "click", "x": 515, "y": 127, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:55:47", "event": "action_executed", "tool": "type_text", "details": "Digitar o texto: 'Claude' na janela 'Configurações'", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:55:47", "event": "type_text", "chars": 6, "method": "typewrite", "text": "Claude"}
+{"ts": "2026-08-10T17:55:50", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-14.png"}
+{"ts": "2026-08-10T17:56:06", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (1297, 253) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:56:06", "event": "click", "x": 1297, "y": 253, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:56:14", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-15.png"}
+{"ts": "2026-08-10T17:56:27", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (1117, 296) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:56:27", "event": "click", "x": 1117, "y": 296, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:56:31", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-16.png"}
+{"ts": "2026-08-10T17:56:51", "event": "action_executed", "tool": "click", "details": "Clicar (left x1) em (1117, 296) na janela 'Configurações'.", "consentimento": "host", "janela": "Configurações"}
+{"ts": "2026-08-10T17:56:52", "event": "click", "x": 1117, "y": 296, "button": "left", "clicks": 1, "window": "Configurações"}
+{"ts": "2026-08-10T17:56:56", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-17.png"}
+{"ts": "2026-08-10T17:57:28", "event": "action_executed", "tool": "focus_window", "details": "Focar a janela: 'Claude'", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:57:28", "event": "focus_window", "janela": "Claude", "primeiro_plano": true}
+{"ts": "2026-08-10T17:57:39", "event": "action_executed", "tool": "press_keys", "details": "Apertar teclas: esc na janela 'Claude'", "consentimento": "host", "janela": "Claude"}
+{"ts": "2026-08-10T17:58:01", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-18.png"}
+{"ts": "2026-08-11T09:20:01", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-11T09:20:01", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}

@@ -55,7 +55,7 @@ mcp = FastMCP("t2m-desktop-control")
 # porque descobrir "qual versao esta realmente rodando" foi uma fonte recorrente
 # de confusao: o app mantem o processo antigo vivo ate reiniciar, e um zip
 # antigo na pasta de downloads e facil de subir por engano.
-VERSAO = "0.8.2"
+VERSAO = "0.8.3"
 
 # ---------------------------------------------------------------------------
 # Log de auditoria
@@ -603,21 +603,58 @@ def reset_approvals() -> str:
 # ---------------------------------------------------------------------------
 
 
+def _virtual_screen_rect() -> tuple[int, int, int, int] | None:
+    """Retorna (left, top, width, height) da TELA VIRTUAL do Windows - o
+    retangulo que engloba todos os monitores.
+
+    O canto (left, top) pode ser NEGATIVO: o Windows ancora a origem (0, 0) no
+    canto do monitor principal, e monitores a esquerda/acima dele ficam em
+    coordenadas negativas. Esse offset e essencial para converter um pixel da
+    captura em coordenada de tela para clique.
+    """
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN = 76, 77
+        SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN = 78, 79
+        return (
+            user32.GetSystemMetrics(SM_XVIRTUALSCREEN),
+            user32.GetSystemMetrics(SM_YVIRTUALSCREEN),
+            user32.GetSystemMetrics(SM_CXVIRTUALSCREEN),
+            user32.GetSystemMetrics(SM_CYVIRTUALSCREEN),
+        )
+    except Exception:
+        return None
+
+
 @mcp.tool()
-def screenshot(path: str = "") -> dict:
-    """Captura a tela inteira e salva como PNG.
+def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> dict:
+    """Captura a tela e salva como PNG.
 
     Acao apenas de leitura - nao pede aprovacao. Use para "ver" a tela antes
     de decidir onde clicar.
+
+    Por padrao captura TODOS os monitores (a tela virtual inteira). A resposta
+    inclui `origin`: o canto superior esquerdo da captura em coordenadas de
+    tela. Para converter um pixel da imagem em coordenada de clique:
+
+        x_tela = x_pixel + origin.left
+        y_tela = y_pixel + origin.top
+
+    (Com um unico monitor, origin e (0, 0) e nada muda. `origin` pode ser
+    negativo quando ha monitor a esquerda/acima do principal.)
 
     Args:
         path: Caminho do arquivo PNG de saida. Se vazio, salva numa pasta
               temporaria gravavel (a pasta de trabalho do servidor nem sempre
               tem permissao de escrita, dependendo de como o plugin foi
               instalado).
+        monitor: "all" (padrao) captura todos os monitores; "primary" captura
+                 so o monitor principal (comportamento das versoes <= 0.8.2).
 
     Returns:
-        Caminho salvo e o tamanho (largura, altura) da tela em pixels.
+        Caminho salvo, tamanho da imagem em pixels, `origin` para conversao
+        pixel -> coordenada de tela e quais monitores foram capturados.
     """
     _require_pyautogui()
     out = path or os.path.join(tempfile.gettempdir(), "t2m_screenshot.png")
@@ -630,7 +667,35 @@ def screenshot(path: str = "") -> dict:
         except Exception as exc:
             raise RuntimeError(f"Nao foi possivel criar a pasta {parent!r}: {exc}")
 
-    img = pyautogui.screenshot()
+    origin = {"left": 0, "top": 0}
+    captured = "primary"
+    img = None
+    if monitor == "all":
+        # ImageGrab.grab(all_screens=True) captura a tela virtual inteira no
+        # Windows. Se falhar por qualquer motivo, cai para o monitor principal
+        # em vez de falhar a ferramenta.
+        try:
+            from PIL import ImageGrab
+            img = ImageGrab.grab(all_screens=True)
+            captured = "all"
+            rect = _virtual_screen_rect()
+            if rect is not None:
+                origin = {"left": rect[0], "top": rect[1]}
+        except Exception as exc:
+            _audit("screenshot_all_screens_fallback", erro=str(exc)[:200])
+            img = None
+    if img is None:
+        img = pyautogui.screenshot()
+        captured = "primary"
+        origin = {"left": 0, "top": 0}
+
+    result = {
+        "size": {"width": img.width, "height": img.height},
+        "origin": origin,
+        "monitors": captured,
+        "nota": ("coordenada de tela = pixel da imagem + origin "
+                 "(origin pode ser negativo com multiplos monitores)"),
+    }
     try:
         img.save(out)
     except PermissionError:
@@ -638,22 +703,32 @@ def screenshot(path: str = "") -> dict:
         fallback = os.path.join(tempfile.gettempdir(), "t2m_screenshot.png")
         img.save(fallback)
         _audit("screenshot_fallback", requested=out, saved=fallback)
-        return {
-            "saved_to": fallback,
-            "size": {"width": img.width, "height": img.height},
-            "aviso": (f"Sem permissao de escrita em {out!r}; "
-                      f"a imagem foi salva em {fallback!r}."),
-        }
-    _audit("screenshot", path=out)
-    return {"saved_to": out, "size": {"width": img.width, "height": img.height}}
+        result["saved_to"] = fallback
+        result["aviso"] = (f"Sem permissao de escrita em {out!r}; "
+                           f"a imagem foi salva em {fallback!r}.")
+        return result
+    _audit("screenshot", path=out, monitors=captured)
+    result["saved_to"] = out
+    return result
 
 
 @mcp.tool()
 def get_screen_size() -> dict:
-    """Retorna a resolucao da tela em pixels. Acao apenas de leitura."""
+    """Retorna a resolucao do monitor principal e, se houver mais de um
+    monitor, o retangulo da tela virtual completa. Acao apenas de leitura.
+    """
     _require_pyautogui()
     w, h = pyautogui.size()
-    return {"width": w, "height": h}
+    result: dict = {"width": w, "height": h}
+    rect = _virtual_screen_rect()
+    if rect is not None and (rect[2], rect[3]) != (w, h):
+        result["virtual_screen"] = {
+            "left": rect[0], "top": rect[1],
+            "width": rect[2], "height": rect[3],
+        }
+        result["nota"] = ("Ha mais de um monitor. screenshot(monitor='all') "
+                          "captura a tela virtual inteira.")
+    return result
 
 
 @mcp.tool()

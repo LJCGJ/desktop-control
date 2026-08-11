@@ -37,10 +37,27 @@ Aprendizados novos (10/08, fim de tarde):
 - Estado deixado: janela do T2M movida para o monitor principal (225,47);
   diálogo Configuracoes fechado com Cancelar (nada salvo).
 
-**Pendências que restam:** (1) reportar à Anthropic o bug do app desktop —
-conector de plugin local fica "não conectado" (detalhes na seção "CAUSA
-ENCONTRADA"); (2) itens de "Publicação" e nomenclatura abaixo; (3) melhoria
-do screenshot multi-monitor.
+**[x] Bug report ENVIADO à Anthropic (10/08 ~18h10):** issue pública
+**anthropics/claude-code#85623** —
+https://github.com/anthropics/claude-code/issues/85623 — criada pelo Claude
+preenchendo o formulário no Chrome do Leonardo (extensão Claude in Chrome),
+com confirmação do Leonardo antes do envio. Sem prints anexados (os originais
+não foram salvos); o texto avisa que podem ser recapturados sob demanda.
+Fonte do texto: `bug-report-anthropic.md` na raiz do projeto. Acompanhar
+respostas no issue.
+
+**Pendências que restam:** (1) itens de "Publicação" e nomenclatura abaixo;
+(2) melhoria do screenshot multi-monitor (`ImageGrab.grab(all_screens=True)`).
+
+Nota de 10/08 ~17h55: a versão do app foi obtida com o PRÓPRIO plugin
+navegando em Configurações do Windows → Aplicativos instalados → Claude →
+Opções avançadas (o app Claude não mostra a versão na própria UI de
+Configurações). Validados em uso real também `type_text` e `scroll`; o
+`scroll` de roda não rolou o painel do modal de configurações do Claude
+(rolou a sidebar) — arrastar a barra de rolagem com `drag` funcionou.
+Durante a sessão o usuário ligou o "uso do computador" nativo do app
+(ferramentas `computer_*` apareceram na ponte) — coexistiu sem conflito com
+o plugin.
 
 ## O que é
 
