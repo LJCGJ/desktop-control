@@ -8,6 +8,11 @@ capturas/
 # Capturas antigas soltas na raiz (padrao usado ate a v0.8.3)
 qa-*.png
 
+# Docs internos do projeto — ficam so na pasta local, fora do repo publico
+CLAUDE.md
+bug-report-anthropic.md
+relatorio-qa-*.md
+
 # Python
 __pycache__/
 *.pyc
