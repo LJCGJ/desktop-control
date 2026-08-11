@@ -55,7 +55,7 @@ mcp = FastMCP("t2m-desktop-control")
 # porque descobrir "qual versao esta realmente rodando" foi uma fonte recorrente
 # de confusao: o app mantem o processo antigo vivo ate reiniciar, e um zip
 # antigo na pasta de downloads e facil de subir por engano.
-VERSAO = "0.8.3"
+VERSAO = "0.8.4"
 
 # ---------------------------------------------------------------------------
 # Log de auditoria
@@ -603,6 +603,53 @@ def reset_approvals() -> str:
 # ---------------------------------------------------------------------------
 
 
+# Pasta padrao das capturas de tela. Fica na raiz do projeto/plugin para ser
+# facil de achar e de APAGAR: a pasta inteira e descartavel - o usuario (ou o
+# Claude) pode exclui-la para limpar as capturas, e o servidor a recria na
+# captura seguinte. Configuravel via T2M_SCREENSHOT_DIR.
+_SCREENSHOT_DIR = os.environ.get(
+    "T2M_SCREENSHOT_DIR",
+    str(Path(__file__).resolve().parent.parent / "capturas"),
+)
+
+
+def _ensure_screenshot_dir() -> str:
+    """Garante que a pasta de capturas exista e devolve o caminho dela.
+
+    A pasta e pensada para ser DESCARTAVEL: apagar a pasta inteira e a forma
+    oficial de limpeza, e aqui ela e recriada quando a proxima captura chegar.
+    Dentro dela o servidor mantem um .gitignore que ignora tudo - assim nada
+    do que cair ali vai parar no repositorio, mesmo depois de a pasta ser
+    apagada e recriada (o .gitignore renasce junto).
+
+    Se a pasta padrao nao for gravavel (ex.: plugin instalado numa pasta
+    protegida), cai para uma pasta 't2m-capturas' no diretorio temporario.
+    """
+    candidatos = (
+        _SCREENSHOT_DIR,
+        os.path.join(tempfile.gettempdir(), "t2m-capturas"),
+    )
+    for base in candidatos:
+        try:
+            os.makedirs(base, exist_ok=True)
+            gi = os.path.join(base, ".gitignore")
+            if not os.path.exists(gi):
+                with open(gi, "w", encoding="utf-8") as fh:
+                    fh.write(
+                        "# Pasta de capturas do t2m-desktop-control.\n"
+                        "# Conteudo descartavel e potencialmente sensivel - "
+                        "nunca versionar.\n"
+                        "# Pode apagar a pasta inteira: o servidor a recria "
+                        "quando precisar.\n"
+                        "*\n"
+                        "!.gitignore\n"
+                    )
+            return base
+        except Exception:
+            continue
+    return tempfile.gettempdir()
+
+
 def _virtual_screen_rect() -> tuple[int, int, int, int] | None:
     """Retorna (left, top, width, height) da TELA VIRTUAL do Windows - o
     retangulo que engloba todos os monitores.
@@ -645,10 +692,12 @@ def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> di
     negativo quando ha monitor a esquerda/acima do principal.)
 
     Args:
-        path: Caminho do arquivo PNG de saida. Se vazio, salva numa pasta
-              temporaria gravavel (a pasta de trabalho do servidor nem sempre
-              tem permissao de escrita, dependendo de como o plugin foi
-              instalado).
+        path: Caminho do arquivo PNG de saida. Se VAZIO, salva na pasta de
+              capturas (por padrao 'capturas/' na raiz do projeto/plugin) com
+              nome timestampado - nada e sobrescrito. Caminho RELATIVO e
+              resolvido dentro dessa mesma pasta. A pasta e descartavel:
+              pode ser apagada inteira para limpeza, o servidor a recria
+              (com um .gitignore proprio) na captura seguinte.
         monitor: "all" (padrao) captura todos os monitores; "primary" captura
                  so o monitor principal (comportamento das versoes <= 0.8.2).
 
@@ -657,7 +706,13 @@ def screenshot(path: str = "", monitor: Literal["all", "primary"] = "all") -> di
         pixel -> coordenada de tela e quais monitores foram capturados.
     """
     _require_pyautogui()
-    out = path or os.path.join(tempfile.gettempdir(), "t2m_screenshot.png")
+    if not path:
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        out = os.path.join(_ensure_screenshot_dir(), f"t2m_{stamp}.png")
+    elif os.path.isabs(path):
+        out = path
+    else:
+        out = os.path.join(_ensure_screenshot_dir(), path)
     out = os.path.abspath(out)
 
     parent = os.path.dirname(out)

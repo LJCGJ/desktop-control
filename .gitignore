@@ -1,0 +1,16 @@
+# Log de auditoria — dados de uso da maquina local, nunca versionar
+t2m_audit.log
+
+# Pasta de capturas de tela — descartavel e potencialmente sensivel.
+# O servidor a recria (com .gitignore interno) se for apagada.
+capturas/
+
+# Capturas antigas soltas na raiz (padrao usado ate a v0.8.3)
+qa-*.png
+
+# Python
+__pycache__/
+*.pyc
+
+# Zips de build do plugin (artefato gerado, nao fonte)
+t2m-desktop-control-*.zip

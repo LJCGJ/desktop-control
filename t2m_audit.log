@@ -80,3 +80,6 @@
 {"ts": "2026-08-10T17:58:01", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-version-18.png"}
 {"ts": "2026-08-11T09:20:01", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
 {"ts": "2026-08-11T09:20:01", "event": "server_start", "versao": "0.8.2", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-11T09:31:49", "event": "server_start", "versao": "0.8.3", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-11T09:31:49", "event": "server_start", "versao": "0.8.3", "mode": "host", "pyautogui": true}
+{"ts": "2026-08-11T09:32:33", "event": "screenshot", "path": "C:\\Users\\LeonardoJoseCordeiro\\Documents\\t2m-desktop-control\\qa-multimon-01.png", "monitors": "all"}

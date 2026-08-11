@@ -46,8 +46,44 @@ não foram salvos); o texto avisa que podem ser recapturados sob demanda.
 Fonte do texto: `bug-report-anthropic.md` na raiz do projeto. Acompanhar
 respostas no issue.
 
+**[x] v0.8.3 — screenshot multi-monitor FEITO e validado em campo (11/08
+~09h30).** `screenshot` agora captura todos os monitores por padrão
+(`ImageGrab.grab(all_screens=True)`) e devolve `origin` (canto da captura em
+coordenadas de tela, pode ser negativo) + `monitors`; conversão documentada:
+`x_tela = x_pixel + origin.left`. `monitor="primary"` mantém o comportamento
+antigo; falha na captura da tela virtual cai para o principal. `get_screen_size`
+passou a expor `virtual_screen` quando há mais de um monitor. Teste real na
+máquina do Leonardo: 2966x900, origin (0, -38), os dois monitores na imagem.
+Versão bumpada em server.py e plugin.json.
+
+Descoberta operacional importante do teste: com o servidor registrado pelo
+`claude_desktop_config.json` apontando para a PASTA DO PROJETO, o ciclo de
+iteração ficou curto — editar server.py → fechar o app pela bandeja → reabrir
+→ a MESMA conversa na nuvem reconecta e as ferramentas proxiadas já servem o
+código novo (get_approval_status respondeu 0.8.3 sem precisar de conversa
+nova). Bem diferente do ciclo do plugin (desinstalar/zip/upload/reiniciar +
+conversa nova).
+
+Nota de privacidade: capturas multi-monitor pegam TUDO (no teste, a reunião
+do Teams com nomes/rostos no 2º monitor — `qa-multimon-01.png`). Apagar
+capturas sensíveis e nunca versioná-las; considerar adicionar `qa-*.png` ao
+.gitignore.
+
+**v0.8.4 — pasta de capturas descartável (ideia do Leonardo, 11/08).**
+Capturas sem `path` vão para `capturas/` na raiz do projeto/plugin com nome
+timestampado (`t2m_YYYYMMDD_HHMMSS.png`, nada é sobrescrito); `path` RELATIVO
+resolve dentro dessa pasta; absoluto segue como antes. A pasta é a unidade de
+limpeza: pode ser APAGADA inteira — o servidor a recria na captura seguinte,
+incluindo um `.gitignore` interno (`*` + `!.gitignore`) que renasce junto,
+então nada dali vai para o git nem depois da recriação. Fallback para
+`%TEMP%\t2m-capturas` se a pasta padrão não for gravável; override via
+`T2M_SCREENSHOT_DIR`. O `.gitignore` da raiz também ganhou `capturas/`.
+STATUS: gravado e compilado; TESTE EM CAMPO PENDENTE (reiniciar o app pela
+bandeja → `get_approval_status` deve dizer 0.8.4 → `screenshot()` sem path
+deve criar `capturas/` com `.gitignore` e nome timestampado).
+
 **Pendências que restam:** (1) itens de "Publicação" e nomenclatura abaixo;
-(2) melhoria do screenshot multi-monitor (`ImageGrab.grab(all_screens=True)`).
+(2) teste em campo da v0.8.4 (acima).
 
 Nota de 10/08 ~17h55: a versão do app foi obtida com o PRÓPRIO plugin
 navegando em Configurações do Windows → Aplicativos instalados → Claude →
