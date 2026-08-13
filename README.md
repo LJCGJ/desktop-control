@@ -105,6 +105,24 @@ Este projeto já está estruturado como plugin (`.claude-plugin/plugin.json`). P
 
 ---
 
+## ⚠️ Problema conhecido no app desktop do Claude (Windows)
+
+O app desktop atualmente carrega plugins com a flag `--plugin-dir`, que ativa as skills mas **não inicia os servidores MCP do plugin** — as ferramentas não aparecem nas sessões e o conector fica "não conectado" ([anthropics/claude-code#86154](https://github.com/anthropics/claude-code/issues/86154); sintoma reportado por este projeto em [#85623](https://github.com/anthropics/claude-code/issues/85623)).
+
+**Workaround até a correção:** registre o servidor manualmente no `claude_desktop_config.json` do app — em instalações via Microsoft Store o arquivo real fica na pasta virtualizada `%LOCALAPPDATA%\Packages\<pacote do Claude>\LocalCache\Roaming\Claude\`:
+
+```json
+"t2m-desktop-control": {
+  "command": "python",
+  "args": ["<PASTA>\\t2m-desktop-control\\server\\server.py"],
+  "env": { "T2M_APPROVAL_MODE": "host" }
+}
+```
+
+Depois feche o app pela bandeja e reabra. No **Claude Code (terminal)** o plugin funciona normalmente, sem workaround.
+
+---
+
 ## Licença
 
 MIT — veja o arquivo `LICENSE`.
